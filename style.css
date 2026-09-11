@@ -4533,15 +4533,55 @@ footer strong {
     font-weight: 800;
     transition: opacity 0.2s ease;
 }
+/* Citizen Report Photo - Small Thumbnail */
+.jd-report-photo {
+    width: 180px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    cursor: pointer;
+    display: block;
+    margin: 8px 0;
+}
 
-/* Sidebar Menu Toggle */
+/* Full Screen Photo */
+.jd-photo-fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.jd-photo-fullscreen img {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.jd-photo-fullscreen-close {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    font-size: 32px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
 #sidebarMenuToggle {
     width: 42px;
     height: 34px;
     min-height: 34px;
     margin: 8px auto 6px;
     padding: 0;
-
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4563,7 +4603,6 @@ footer strong {
     border-color: var(--blue);
     transform: scale(1.04);
 }
-
 .sidebar.sidebar-collapsed {
     width: 70px !important;
 }
