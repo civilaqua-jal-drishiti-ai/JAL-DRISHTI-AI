@@ -1,0 +1,3802 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>CIVIL AQUA JAL DRISHTI AI</title>
+
+
+    <!-- =====================================================
+         THEME
+    ====================================================== -->
+
+    <script>
+
+        (function () {
+
+            const savedTheme =
+                localStorage.getItem("jalDrishtiTheme");
+
+            if (savedTheme === "light") {
+
+                document.documentElement.classList.add(
+                    "light-theme"
+                );
+
+            }
+
+        })();
+
+    </script>
+
+
+    <!-- =====================================================
+         LEAFLET
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <!-- =====================================================
+         MAIN CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+
+    <!-- =====================================================
+         NAVIGATION CSS
+    ====================================================== -->
+
+    <style>
+
+        /* =====================================================
+           SIDEBAR
+        ====================================================== */
+
+        .sidebar {
+
+            display: flex;
+
+            flex-direction: column;
+
+            height: 100vh;
+
+            overflow: hidden;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR NAV
+        ====================================================== */
+
+        .sidebar nav {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 4px;
+
+            flex: 1;
+
+            overflow-y: auto;
+
+            overflow-x: hidden;
+
+            padding: 0 2px;
+
+            scrollbar-width: thin;
+
+        }
+
+
+        /* =====================================================
+           13 OPTIONS
+        ====================================================== */
+
+        .sidebar nav button {
+
+            position: relative;
+
+            width: 100%;
+
+            height: 50px;
+
+            min-height: 50px;
+
+            flex-shrink: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 9px 12px;
+
+            border-radius: 10px;
+
+            border: 1px solid transparent;
+
+            background: transparent;
+
+            color: var(--muted);
+
+            cursor: pointer;
+
+            text-align: left;
+
+            font-size: 14px;
+
+            font-weight: 700;
+
+            transition:
+
+                background .2s ease,
+
+                color .2s ease,
+
+                border .2s ease,
+
+                transform .2s ease,
+
+                box-shadow .2s ease;
+
+        }
+
+
+        /* =====================================================
+           HOVER
+        ====================================================== */
+
+        .sidebar nav button:hover {
+
+            color: var(--text);
+
+            background:
+                rgba(8,191,255,.08);
+
+            border-color:
+                rgba(8,191,255,.18);
+
+            transform:
+                translateX(2px);
+
+        }
+
+
+        /* =====================================================
+           ACTIVE
+        ====================================================== */
+
+        .sidebar nav button.active {
+
+            color: var(--text);
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    rgba(8,191,255,.20),
+                    rgba(8,191,255,.05)
+                );
+
+            border-color:
+                rgba(8,191,255,.30);
+
+            box-shadow:
+
+                0 0 16px
+                rgba(8,191,255,.10);
+
+        }
+
+
+        /* =====================================================
+           ACTIVE BLUE LINE
+        ====================================================== */
+
+        .sidebar nav button.active::before {
+
+            content: "";
+
+            position: absolute;
+
+            left: -1px;
+
+            top: 7px;
+
+            bottom: 7px;
+
+            width: 3px;
+
+            border-radius:
+                0 5px 5px 0;
+
+            background:
+                var(--blue);
+
+            box-shadow:
+                0 0 9px
+                rgba(8,191,255,.90);
+
+        }
+
+
+        /* =====================================================
+           SECTION HIGHLIGHT
+        ====================================================== */
+
+        .jal-section-highlight {
+
+            position: relative;
+
+            border-radius: 16px;
+
+            scroll-margin-top: 90px;
+
+            animation:
+                jalSectionGlow 2.7s ease-in-out;
+
+        }
+
+
+        .jal-section-highlight::after {
+
+            content: "";
+
+            position: absolute;
+
+            inset: -3px;
+
+            border-radius: inherit;
+
+            pointer-events: none;
+
+            box-shadow:
+
+                0 0 0 1px
+                rgba(8,191,255,.55),
+
+                0 0 30px
+                rgba(8,191,255,.22),
+
+                inset 0 0 25px
+                rgba(8,191,255,.07);
+
+            animation:
+                jalGlowPulse 2.7s ease-in-out;
+
+            z-index: 0;
+
+        }
+
+
+        @keyframes jalSectionGlow {
+
+            0% {
+
+                transform: scale(1);
+
+                filter: brightness(1);
+
+            }
+
+            18% {
+
+                transform: scale(1.004);
+
+                filter: brightness(1.12);
+
+            }
+
+            50% {
+
+                transform: scale(1.002);
+
+                filter: brightness(1.06);
+
+            }
+
+            100% {
+
+                transform: scale(1);
+
+                filter: brightness(1);
+
+            }
+
+        }
+
+
+        @keyframes jalGlowPulse {
+
+            0% {
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .70;
+            }
+
+            100% {
+                opacity: 0;
+            }
+
+        }
+
+
+        /* =====================================================
+           SCENARIO
+        ====================================================== */
+
+        .scenario-section {
+
+            margin-top: 24px;
+
+        }
+
+
+        .scenario-panel {
+
+            background:
+                var(--panel);
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                18px;
+
+            padding:
+                22px;
+
+            box-shadow:
+                var(--shadow);
+
+        }
+
+
+        .scenario-header {
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                15px;
+
+            margin-bottom:
+                18px;
+
+            flex-wrap:
+                wrap;
+
+        }
+
+
+        .scenario-header strong {
+
+            font-size:
+                17px;
+
+        }
+
+
+        .scenario-header small {
+
+            display:
+                block;
+
+            margin-top:
+                5px;
+
+            color:
+                var(--muted);
+
+        }
+
+
+        .scenario-mode {
+
+            padding:
+                8px 13px;
+
+            border-radius:
+                999px;
+
+            border:
+                1px solid var(--border);
+
+            font-size:
+                12px;
+
+            font-weight:
+                800;
+
+        }
+
+
+        .scenario-buttons {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(4,1fr);
+
+            gap:
+                12px;
+
+        }
+
+
+        .scenario-btn {
+
+            border:
+                1px solid var(--border);
+
+            background:
+                var(--panel-2);
+
+            color:
+                var(--text);
+
+            padding:
+                14px 10px;
+
+            border-radius:
+                13px;
+
+            cursor:
+                pointer;
+
+            font-weight:
+                800;
+
+        }
+
+
+        .scenario-btn:hover {
+
+            transform:
+                translateY(-2px);
+
+            border-color:
+                var(--blue);
+
+        }
+
+
+        .scenario-btn.active {
+
+            border-color:
+                var(--blue);
+
+            box-shadow:
+                0 0 0 2px
+                rgba(8,191,255,.12);
+
+        }
+
+
+        .scenario-btn span {
+
+            display:
+                block;
+
+            font-size:
+                20px;
+
+            margin-bottom:
+                5px;
+
+        }
+
+
+        .scenario-note {
+
+            margin-top:
+                15px;
+
+            padding:
+                12px 14px;
+
+            border-radius:
+                12px;
+
+            background:
+                var(--panel-2);
+
+            color:
+                var(--muted);
+
+            font-size:
+                12px;
+
+            line-height:
+                1.5;
+
+        }
+
+
+        /* =====================================================
+           CHART
+        ====================================================== */
+
+        .chart-card {
+
+            min-height:
+                340px;
+
+        }
+
+
+        #waterChart {
+
+            display:
+                block;
+
+            width:
+                100%;
+
+            min-height:
+                260px;
+
+            height:
+                260px;
+
+        }
+
+
+        /* =====================================================
+           SMALL SCREEN HEIGHT
+        ====================================================== */
+
+        @media (max-height: 850px) {
+
+            .sidebar nav button {
+
+                height: 40px;
+
+                min-height: 40px;
+
+                padding: 8px 11px;
+
+                font-size: 11px;
+
+            }
+
+            .sidebar nav {
+
+                gap: 3px;
+
+            }
+
+        }
+
+
+        @media (max-height: 720px) {
+
+            .sidebar nav button {
+
+                height: 36px;
+
+                min-height: 36px;
+
+                padding: 7px 10px;
+
+                font-size: 11px;
+
+            }
+
+        }
+
+
+        @media (max-width: 800px) {
+
+            .scenario-buttons {
+
+                grid-template-columns:
+                    repeat(2,1fr);
+
+            }
+
+        }
+
+
+        @media (max-width: 450px) {
+
+            .scenario-buttons {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================================
+         CIVIL AQUA WATERMARK
+    ====================================================== -->
+
+    <div class="civil-aqua-watermark">
+
+        <svg
+            viewBox="0 0 500 620"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+
+            <defs>
+
+                <linearGradient
+                    id="civilAquaGradient"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="1"
+                >
+
+                    <stop
+                        offset="0%"
+                        stop-color="#08bfff"
+                    />
+
+                    <stop
+                        offset="100%"
+                        stop-color="#0874ca"
+                    />
+
+                </linearGradient>
+
+            </defs>
+
+
+            <path
+                d="M250 30 C250 30 105 205 105 340 C105 445 168 520 250 520 C332 520 395 445 395 340 C395 205 250 30 250 30Z"
+                fill="none"
+                stroke="url(#civilAquaGradient)"
+                stroke-width="6"
+            />
+
+
+            <path
+                d="M250 100 C250 100 155 220 155 335 C155 410 198 465 250 465 C302 465 345 410 345 335 C345 220 250 100 250 100Z"
+                fill="none"
+                stroke="#08bfff"
+                stroke-width="3"
+                opacity=".65"
+            />
+
+
+            <g
+                stroke="#08bfff"
+                stroke-width="3"
+                opacity=".9"
+            >
+
+                <line
+                    x1="200"
+                    y1="260"
+                    x2="250"
+                    y2="310"
+                />
+
+                <line
+                    x1="300"
+                    y1="260"
+                    x2="250"
+                    y2="310"
+                />
+
+                <line
+                    x1="220"
+                    y1="360"
+                    x2="250"
+                    y2="310"
+                />
+
+                <line
+                    x1="280"
+                    y1="360"
+                    x2="250"
+                    y2="310"
+                />
+
+            </g>
+
+
+            <g fill="#08bfff">
+
+                <circle
+                    cx="200"
+                    cy="260"
+                    r="9"
+                />
+
+                <circle
+                    cx="300"
+                    cy="260"
+                    r="9"
+                />
+
+                <circle
+                    cx="220"
+                    cy="360"
+                    r="9"
+                />
+
+                <circle
+                    cx="280"
+                    cy="360"
+                    r="9"
+                />
+
+                <circle
+                    cx="250"
+                    cy="310"
+                    r="14"
+                />
+
+            </g>
+
+
+            <ellipse
+                cx="250"
+                cy="215"
+                rx="42"
+                ry="62"
+                fill="none"
+                stroke="#08bfff"
+                stroke-width="4"
+            />
+
+
+            <ellipse
+                cx="250"
+                cy="215"
+                rx="22"
+                ry="36"
+                fill="none"
+                stroke="#08bfff"
+                stroke-width="3"
+            />
+
+
+            <circle
+                cx="250"
+                cy="215"
+                r="9"
+                fill="#08bfff"
+            />
+
+
+            <text
+                x="250"
+                y="415"
+                text-anchor="middle"
+                fill="#08bfff"
+                font-size="27"
+                font-weight="bold"
+                letter-spacing="3"
+            >
+                CIVIL AQUA
+            </text>
+
+
+            <line
+                x1="165"
+                y1="430"
+                x2="335"
+                y2="430"
+                stroke="#08bfff"
+                stroke-width="2"
+            />
+
+
+            <text
+                x="250"
+                y="455"
+                text-anchor="middle"
+                fill="#08bfff"
+                font-size="17"
+                font-weight="bold"
+                letter-spacing="2"
+            >
+                JAL-DRISHTI AI
+            </text>
+
+
+            <path
+                d="M170 490 Q210 475 250 490 T330 490"
+                fill="none"
+                stroke="#08bfff"
+                stroke-width="4"
+            />
+
+
+            <path
+                d="M185 505 Q220 492 250 505 T315 505"
+                fill="none"
+                stroke="#0874ca"
+                stroke-width="3"
+            />
+
+        </svg>
+
+    </div>
+
+
+    <!-- =====================================================
+         APP
+    ====================================================== -->
+
+    <div class="app">
+
+
+        <!-- =================================================
+             SIDEBAR
+        ================================================== -->
+
+        <aside class="sidebar">
+
+
+            <!-- LOGO -->
+
+            <div class="logo">
+
+                <div class="logo-icon">
+                    💧
+                </div>
+
+                <div>
+
+                    <h2>
+                        JAL-DRISHTI
+                    </h2>
+
+                    <span>
+                        AI WATER INTELLIGENCE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 13 OPTIONS — SECTION ORDER
+            ================================================== -->
+
+            <nav id="jalMainNavigation">
+
+
+                <!-- 1 DASHBOARD -->
+
+                <button
+                    class="active"
+                    data-target="dashboard"
+                    type="button"
+                >
+
+                    📊
+
+                    <span>
+                        Dashboard
+                    </span>
+
+                </button>
+
+
+                <!-- 2 AI SCENARIO -->
+
+                <button
+                    data-target="ai-scenario"
+                    type="button"
+                >
+
+                    🎛️
+
+                    <span>
+                        AI Scenario
+                    </span>
+
+                </button>
+
+
+                <!-- 3 LIVE SENSORS -->
+
+                <button
+                    data-target="live-sensors"
+                    type="button"
+                >
+
+                    📡
+
+                    <span>
+                        Live Sensors
+                    </span>
+
+                </button>
+
+
+                <!-- 4 AI INTELLIGENCE -->
+
+                <button
+                    data-target="ai-intelligence"
+                    type="button"
+                >
+
+                    🤖
+
+                    <span>
+                        AI Intelligence
+                    </span>
+
+                </button>
+
+
+                <!-- 5 WATER FINGERPRINT -->
+
+                <button
+                    data-target="water-fingerprint"
+                    type="button"
+                >
+
+                    🧬
+
+                    <span>
+                        Water Fingerprint
+                    </span>
+
+                </button>
+
+
+                <!-- 6 SMART ALERTS -->
+
+                <button
+                    data-target="smart-alerts"
+                    type="button"
+                >
+
+                    🚨
+
+                    <span>
+                        Smart Alerts
+                    </span>
+
+                </button>
+
+                <!-- 14 SMS ALERT NUMBERS -->
+                <button
+                    data-target="sms-alert-numbers"
+                    type="button"
+                >
+                    📱
+                    <span>
+                        SMS Alert Numbers
+                    </span>
+                </button>
+
+
+                <!-- 7 GIS MONITORING -->
+
+                <button
+                    data-target="gis-monitoring"
+                    type="button"
+                >
+
+                    🗺️
+
+                    <span>
+                        GIS Monitoring
+                    </span>
+
+                </button>
+
+
+                <!-- 8 ANALYTICS -->
+
+                <button
+                    data-target="analytics"
+                    type="button"
+                >
+
+                    📊
+
+                    <span>
+                        Analytics
+                    </span>
+
+                </button>
+
+
+                <!-- 9 AI PREDICTION -->
+
+                <button
+                    data-target="ai-prediction"
+                    type="button"
+                >
+
+                    🔮
+
+                    <span>
+                        AI Prediction
+                    </span>
+
+                </button>
+
+
+                <!-- 10 SENSOR PERFORMANCE -->
+
+                <button
+                    data-target="sensor-performance"
+                    type="button"
+                >
+
+                    📶
+
+                    <span>
+                        Sensor Performance
+                    </span>
+
+                </button>
+
+
+                <!-- 11 WATER RISK TREND -->
+
+                <button
+                    data-target="water-risk-trend"
+                    type="button"
+                >
+
+                    📈
+
+                    <span>
+                        Water Risk Trend
+                    </span>
+
+                </button>
+
+
+                <!-- 12 HISTORICAL RISK -->
+
+                <button
+                    data-target="historical-risk"
+                    type="button"
+                >
+
+                    📉
+
+                    <span>
+                        Historical Risk
+                    </span>
+
+                </button>
+
+
+                <!-- 13 SYSTEM HEALTH -->
+
+                <button
+                    data-target="system-health"
+                    type="button"
+                >
+
+                    ⚡
+
+                    <span>
+                        System Health
+                    </span>
+
+                </button>
+
+
+            </nav>
+
+
+            <!-- SYSTEM STATUS -->
+
+            <div class="system-status">
+
+                <div class="status-light"></div>
+
+                <div>
+
+                    <strong>
+                        System Online
+                    </strong>
+
+                    <small>
+                        AI Engine Active
+                    </small>
+
+                </div>
+
+            </div>
+
+
+        </aside>
+
+
+        <!-- =================================================
+             MAIN
+        ================================================== -->
+
+        <main class="main">
+
+
+            <!-- =================================================
+                 1 DASHBOARD
+            ================================================== -->
+
+            <div id="dashboard">
+
+
+                <header class="topbar">
+
+
+                    <div>
+
+                        <div class="small-title">
+                            SMART WATER RISK INTELLIGENCE
+                        </div>
+
+
+                        <h1>
+                            JAL-DRISHTI AI
+                        </h1>
+
+
+                        <div class="subtitle">
+                            IoT + AI + GIS Early-Warning Platform
+                        </div>
+
+                    </div>
+
+
+                    <div class="topbar-actions">
+
+
+                        <div class="top-status">
+
+                            <div class="live-dot"></div>
+
+                            <div>
+
+                                <strong>
+                                    LIVE MONITORING
+                                </strong>
+
+                                <small>
+                                    Real-time AI simulation
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            id="fullscreenToggle"
+                            class="theme-toggle jal-fullscreen-main-button"
+                            type="button"
+                            title="Enter Fullscreen"
+                        >
+                            <span id="fullscreenIcon">⛶</span>
+                            <span id="fullscreenText">Fullscreen</span>
+                        </button>
+
+
+                        <button
+                            id="themeToggle"
+                            class="theme-toggle"
+                            type="button"
+                        >
+
+                            <span id="themeIcon">
+                                ☀️
+                            </span>
+
+                            <span id="themeText">
+                                Light
+                            </span>
+
+                        </button>
+
+
+                    </div>
+
+
+                </header>
+
+
+                <!-- RISK OVERVIEW -->
+
+                <section class="overview-grid">
+
+
+                    <div class="risk-card">
+
+
+                        <div class="risk-header">
+
+
+                            <div>
+
+                                <div class="small-title">
+                                    AI WATER RISK SCORE
+                                </div>
+
+
+                                <h2 id="riskScore">
+                                    12
+                                </h2>
+
+
+                                <span
+                                    id="riskStatus"
+                                    class="safe"
+                                >
+                                    LOW RISK
+                                </span>
+
+                            </div>
+
+
+                            <div class="risk-circle">
+
+                                <span id="riskCircleValue">
+                                    12
+                                </span>
+
+                            </div>
+
+
+                        </div>
+
+
+                        <div class="risk-bar">
+
+                            <div
+                                id="riskBarFill"
+                                class="risk-bar-fill"
+                            ></div>
+
+                        </div>
+
+
+                        <div class="risk-footer">
+
+                            <span>
+                                0 = Safe
+                            </span>
+
+                            <strong>
+                                100 = Critical
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="mini-card">
+
+                        <div class="mini-icon">
+                            💧
+                        </div>
+
+                        <div>
+
+                            <small>
+                                WATER HEALTH
+                            </small>
+
+                            <strong id="waterHealth">
+                                GOOD
+                            </strong>
+
+                            <p>
+                                AI quality assessment
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mini-card">
+
+                        <div class="mini-icon">
+                            🤖
+                        </div>
+
+                        <div>
+
+                            <small>
+                                AI MODEL
+                            </small>
+
+                            <strong>
+                                ACTIVE
+                            </strong>
+
+                            <p>
+                                Pattern detection
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mini-card">
+
+                        <div class="mini-icon">
+                            📡
+                        </div>
+
+                        <div>
+
+                            <small>
+                                SENSOR NETWORK
+                            </small>
+
+                            <strong>
+                                7 / 7
+                            </strong>
+
+                            <p>
+                                Live monitoring
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                </section>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 2 AI SCENARIO
+            ================================================== -->
+
+            <section
+                class="scenario-section"
+                id="ai-scenario"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        AI Scenario Simulator
+                    </h2>
+
+                    <span>
+                        DEMO CONTROL
+                    </span>
+
+                </div>
+
+
+                <div class="scenario-panel">
+
+
+                    <div class="scenario-header">
+
+                        <div>
+
+                            <strong>
+                                🎛️ Water Risk Scenario Control
+                            </strong>
+
+                            <small>
+                                Use these scenarios during project demonstration to show how JAL-DRISHTI AI reacts to changing water conditions.
+                            </small>
+
+                        </div>
+
+
+                        <div
+                            class="scenario-mode"
+                            id="scenarioMode"
+                        >
+                            AUTO DEMO
+                        </div>
+
+                    </div>
+
+
+                    <div class="scenario-buttons">
+
+
+                        <button
+                            class="scenario-btn active"
+                            id="scenarioNormal"
+                            type="button"
+                            onclick="setAIScenario('normal')"
+                        >
+
+                            <span>
+                                🟢
+                            </span>
+
+                            NORMAL
+
+                        </button>
+
+
+                        <button
+                            class="scenario-btn"
+                            id="scenarioWarning"
+                            type="button"
+                            onclick="setAIScenario('warning')"
+                        >
+
+                            <span>
+                                🟡
+                            </span>
+
+                            WARNING
+
+                        </button>
+
+
+                        <button
+                            class="scenario-btn"
+                            id="scenarioCritical"
+                            type="button"
+                            onclick="setAIScenario('critical')"
+                        >
+
+                            <span>
+                                🔴
+                            </span>
+
+                            CRITICAL
+
+                        </button>
+
+
+                        <button
+                            class="scenario-btn"
+                            id="scenarioRecovery"
+                            type="button"
+                            onclick="setAIScenario('recovery')"
+                        >
+
+                            <span>
+                                🔵
+                            </span>
+
+                            RECOVERY
+
+                        </button>
+
+
+                    </div>
+
+
+                    <div class="scenario-note">
+
+                        <strong>
+                            💡 Demo Tip:
+                        </strong>
+
+                        Select
+                        <b>Critical</b>
+                        to demonstrate AI alerts and high water risk, then select
+                        <b>Recovery</b>
+                        to show the system returning toward safer conditions.
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 3 LIVE SENSORS
+            ================================================== -->
+
+            <section
+                class="sensor-section"
+                id="live-sensors"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        Live Water Sensors
+                    </h2>
+
+                    <span>
+                        ● LIVE DATA
+                    </span>
+
+                </div>
+
+
+                <div class="sensor-grid">
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-ph"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                pH
+                            </span>
+
+                            <span class="sensor-icon">
+                                🧪
+                            </span>
+
+                        </div>
+
+                        <p>
+                            ACIDITY / ALKALINITY
+                        </p>
+
+                        <h3>
+
+                            <span id="phValue">
+                                7.20
+                            </span>
+
+                            <small>
+                                pH
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="phStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="phTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-turbidity"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                Turbidity
+                            </span>
+
+                            <span class="sensor-icon">
+                                🌫️
+                            </span>
+
+                        </div>
+
+                        <p>
+                            WATER CLARITY
+                        </p>
+
+                        <h3>
+
+                            <span id="turbidityValue">
+                                14
+                            </span>
+
+                            <small>
+                                NTU
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="turbidityStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="turbidityTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-tds"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                TDS / EC
+                            </span>
+
+                            <span class="sensor-icon">
+                                ⚗️
+                            </span>
+
+                        </div>
+
+                        <p>
+                            DISSOLVED SOLIDS
+                        </p>
+
+                        <h3>
+
+                            <span id="tdsValue">
+                                420
+                            </span>
+
+                            <small>
+                                ppm
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="tdsStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="tdsTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-temperature"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                Temperature
+                            </span>
+
+                            <span class="sensor-icon">
+                                🌡️
+                            </span>
+
+                        </div>
+
+                        <p>
+                            WATER TEMPERATURE
+                        </p>
+
+                        <h3>
+
+                            <span id="temperatureValue">
+                                28.4
+                            </span>
+
+                            <small>
+                                °C
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="temperatureStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="temperatureTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-waterLevel"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                Water Level
+                            </span>
+
+                            <span class="sensor-icon">
+                                📏
+                            </span>
+
+                        </div>
+
+                        <p>
+                            STORAGE LEVEL
+                        </p>
+
+                        <h3>
+
+                            <span id="waterLevelValue">
+                                72
+                            </span>
+
+                            <small>
+                                %
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="waterLevelStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="waterLevelTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-rainfall"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                Rainfall
+                            </span>
+
+                            <span class="sensor-icon">
+                                🌧️
+                            </span>
+
+                        </div>
+
+                        <p>
+                            PRECIPITATION
+                        </p>
+
+                        <h3>
+
+                            <span id="rainfallValue">
+                                4.2
+                            </span>
+
+                            <small>
+                                mm
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="rainfallStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="rainfallTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-do"
+                    >
+
+                        <div class="sensor-top">
+
+                            <span>
+                                Dissolved Oxygen
+                            </span>
+
+                            <span class="sensor-icon">
+                                🫧
+                            </span>
+
+                        </div>
+
+                        <p>
+                            OXYGEN LEVEL
+                        </p>
+
+                        <h3>
+
+                            <span id="doValue">
+                                6.8
+                            </span>
+
+                            <small>
+                                mg/L
+                            </small>
+
+                        </h3>
+
+                        <span
+                            id="doStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="doTrend">
+                            →
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 4 AI INTELLIGENCE
+            ================================================== -->
+
+            <section
+                class="ai-section"
+                id="ai-intelligence"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        AI Water Intelligence
+                    </h2>
+
+                    <span>
+                        WHAT • WHY • WHAT NEXT
+                    </span>
+
+                </div>
+
+
+                <div class="ai-grid">
+
+
+                    <div class="ai-card">
+
+                        <div class="ai-card-header">
+
+                            <div class="ai-icon">
+                                🔎
+                            </div>
+
+                            <div>
+
+                                <p>
+                                    WHAT HAPPENED?
+                                </p>
+
+                                <h3 id="aiWhat">
+                                    Water conditions are currently stable.
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="ai-card">
+
+                        <div class="ai-card-header">
+
+                            <div class="ai-icon">
+                                🧠
+                            </div>
+
+                            <div>
+
+                                <p>
+                                    WHY?
+                                </p>
+
+                                <h3 id="aiWhy">
+                                    Sensor parameters remain within configured safe ranges.
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="ai-card">
+
+                        <div class="ai-card-header">
+
+                            <div class="ai-icon">
+                                ⚡
+                            </div>
+
+                            <div>
+
+                                <p>
+                                    WHAT NEXT?
+                                </p>
+
+                                <h3 id="aiAction">
+                                    Continue real-time monitoring.
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 5 WATER FINGERPRINT
+            ================================================== -->
+
+            <section
+                class="fingerprint-section"
+                id="water-fingerprint"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        AI Water Fingerprint
+                    </h2>
+
+                    <span>
+                        MULTI-SENSOR PATTERN ANALYSIS
+                    </span>
+
+                </div>
+
+
+                <div class="fingerprint-card">
+
+
+                    <div class="fingerprint-top">
+
+                        <div>
+
+                            <strong>
+                                Water Quality Fingerprint
+                            </strong>
+
+                            <small>
+                                AI-generated multi-parameter signature
+                            </small>
+
+                        </div>
+
+
+                        <div class="fingerprint-score">
+
+                            <span id="fingerprintScore">
+                                90
+                            </span>
+
+                            <small>
+                                /100
+                            </small>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="fingerprint-bars">
+
+
+                        <div class="fingerprint-row">
+
+                            <span>
+                                pH Stability
+                            </span>
+
+                            <div class="fingerprint-bar">
+
+                                <div
+                                    id="phFingerprint"
+                                    style="width:90%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="phFingerprintValue">
+                                --
+                            </strong>
+
+                        </div>
+
+
+                        <div class="fingerprint-row">
+
+                            <span>
+                                Turbidity
+                            </span>
+
+                            <div class="fingerprint-bar">
+
+                                <div
+                                    id="turbidityFingerprint"
+                                    style="width:90%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="turbidityFingerprintValue">
+                                --
+                            </strong>
+
+                        </div>
+
+
+                        <div class="fingerprint-row">
+
+                            <span>
+                                TDS
+                            </span>
+
+                            <div class="fingerprint-bar">
+
+                                <div
+                                    id="tdsFingerprint"
+                                    style="width:90%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="tdsFingerprintValue">
+                                --
+                            </strong>
+
+                        </div>
+
+
+                        <div class="fingerprint-row">
+
+                            <span>
+                                Temperature
+                            </span>
+
+                            <div class="fingerprint-bar">
+
+                                <div
+                                    id="temperatureFingerprint"
+                                    style="width:90%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="temperatureFingerprintValue">
+                                --
+                            </strong>
+
+                        </div>
+
+
+                        <div class="fingerprint-row">
+
+                            <span>
+                                Dissolved Oxygen
+                            </span>
+
+                            <div class="fingerprint-bar">
+
+                                <div
+                                    id="doFingerprint"
+                                    style="width:90%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="doFingerprintValue">
+                                --
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="fingerprint-result">
+
+                        <span>
+                            AI INTERPRETATION
+                        </span>
+
+                        <strong id="fingerprintMessage">
+                            Water fingerprint currently appears stable.
+                        </strong>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 6 SMART ALERTS
+            ================================================== -->
+
+            <section
+                class="alerts-section"
+                id="smart-alerts"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        Smart Alert Center
+                    </h2>
+
+                    <span>
+                        AI PRIORITY ALERTS
+                    </span>
+
+                </div>
+
+
+                <div class="alert-summary">
+
+
+                    <div class="alert-stat">
+
+                        <div class="alert-stat-icon">
+                            🔴
+                        </div>
+
+                        <div>
+
+                            <strong id="criticalCount">
+                                0
+                            </strong>
+
+                            <small>
+                                Critical
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="alert-stat">
+
+                        <div class="alert-stat-icon">
+                            🟡
+                        </div>
+
+                        <div>
+
+                            <strong id="warningCount">
+                                0
+                            </strong>
+
+                            <small>
+                                Warning
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="alert-stat">
+
+                        <div class="alert-stat-icon">
+                            🟢
+                        </div>
+
+                        <div>
+
+                            <strong id="normalCount">
+                                7
+                            </strong>
+
+                            <small>
+                                Normal
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    id="smartAlertList"
+                    class="smart-alert-list"
+                ></div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 SMS ALERT NUMBERS
+            ================================================== -->
+            <section
+                class="sms-alert-section"
+                id="sms-alert-numbers"
+            >
+                <div class="section-heading">
+                    <h2>SMS Alert Numbers</h2>
+                    <span>SUPERVISOR ALERT RECIPIENTS</span>
+                </div>
+
+                <div class="sms-alert-panel">
+                    <div class="sms-alert-header">
+                        <div>
+                            <strong>📱 Supervisor Mobile Numbers</strong>
+                            <small>Add only mobile numbers. Every saved number is an alert recipient.</small>
+                        </div>
+                        <span id="smsAlertNumberCount">0 NUMBERS</span>
+                    </div>
+
+                    <div class="sms-alert-add-row">
+                        <input
+                            id="smsAlertMobileInput"
+                            type="tel"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            maxlength="10"
+                            placeholder="Enter 10-digit mobile number"
+                        >
+                        <button
+                            id="addSmsAlertNumber"
+                            type="button"
+                        >＋ Add Number</button>
+                    </div>
+
+                    <div
+                        id="smsAlertNumberList"
+                        class="sms-alert-number-list"
+                    ></div>
+
+                    <div class="sms-alert-preview" id="smsAlertPreview">
+                        <strong>🚨 Alert message preview</strong>
+                        <p>English + Hindi + Gujarati alerts will be prepared for every saved supervisor number when a warning or critical sensor condition occurs.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =================================================
+                 7 GIS MONITORING
+            ================================================== -->
+
+            <section
+                class="map-section"
+                id="gis-monitoring"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        GIS Water Monitoring
+                    </h2>
+
+                    <span>
+                        NATIONAL GIS READY
+                    </span>
+
+                </div>
+
+
+                <div class="map-panel">
+
+
+                    <div class="map-header">
+
+
+                        <div class="map-title">
+
+                            <strong>
+                                🛰️ Visnagar Water Intelligence Map
+                            </strong>
+
+                            <small id="mapLocationText">
+                                India → Gujarat → Mehsana → Visnagar
+                            </small>
+
+                        </div>
+
+
+                        <div class="map-controls">
+
+
+                            <button
+                                onclick="zoomToVisnagar()"
+                                type="button"
+                            >
+                                📍 Visnagar
+                            </button>
+
+
+                            <button
+                                onclick="toggleBuildings()"
+                                type="button"
+                            >
+                                🏠 Buildings
+                            </button>
+
+
+                            <button
+                                onclick="zoomToVillage()"
+                                type="button"
+                            >
+                                🔍 Village View
+                            </button>
+
+
+                            <button
+                                onclick="showMyLiveLocation()"
+                                type="button"
+                            >
+                                📍 My Live Location
+                            </button>
+
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- NEW: MAP SEARCH + MANUAL CONTROLS -->
+                    <div class="jal-map-search-panel">
+                        <div class="jal-map-search-row">
+                            <input
+                                id="mapSearchInput"
+                                type="search"
+                                placeholder="Search village, city or water station..."
+                                autocomplete="off"
+                            >
+                            <button id="mapSearchButton" type="button">
+                                🔎 Search
+                            </button>
+                            <button id="mapFullscreenButton" type="button"
+                                    onclick="toggleMapFullscreen()">
+                                ⛶ Full Screen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="map-legend">
+
+
+                        <span>
+
+                            <span class="legend-dot normal-dot"></span>
+
+                            Safe
+
+                        </span>
+
+
+                        <span>
+
+                            <span class="legend-dot warning-dot"></span>
+
+                            Warning
+
+                        </span>
+
+
+                        <span>
+
+                            <span class="legend-dot critical-dot"></span>
+
+                            Critical
+
+                        </span>
+
+
+                    </div>
+
+
+                    <div class="jal-map-extra-info">
+                        <span>🗺️ <b id="mapLayerText">Normal</b></span>
+                        <span id="mapZoomText">Zoom 13</span>
+                        <span id="nearestWaterText">Nearest water source will appear here</span>
+                        <span>🧭 Direction: <b id="nearestWaterDirection">--</b></span>
+                        <span>📏 Distance: <b id="nearestWaterDistance">--</b></span>
+                        <a id="nearestWaterDirections" href="#" target="_blank" rel="noopener">🚶 Navigate to nearest water</a>
+                    </div>
+
+                    <div
+                        id="waterMap"
+                        class="real-map"
+                    ></div>
+
+
+                    <div class="map-info-bar">
+
+                        <span>
+                            🛰️ Satellite imagery
+                        </span>
+
+                        <span>
+                            🏠 Building / road overlay
+                        </span>
+
+                        <span>
+                            💧 Demo monitoring stations
+                        </span>
+
+                        <span>
+                            🤖 AI risk visualization
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+
+            <!-- =================================================
+                 NEW: CITIZEN DIRTY WATER REPORTS
+            ================================================== -->
+            <section class="citizen-report-section" id="citizen-water-reports">
+
+                <div class="section-heading">
+                    <h2>🚨 Citizen Dirty Water Reports</h2>
+                    <span>COMMUNITY INTELLIGENCE</span>
+                </div>
+
+                <div class="citizen-report-grid">
+
+                    <div class="citizen-report-form">
+
+                        <h3>📱 Submit Water Report</h3>
+
+                        <div class="report-form-group">
+                            <label for="reporterName">👤 Your Name</label>
+                            <input id="reporterName" type="text"
+                                   placeholder="Enter your name">
+                        </div>
+
+                        <div class="report-form-group">
+                            <label for="reportPhoto">📷 Dirty Water Photo</label>
+                            <input id="reportPhoto" type="file"
+                                   accept="image/*" capture="environment">
+
+                            <div id="reportPhotoStatus"
+                                 class="report-photo-status">
+                                No photo selected.
+                            </div>
+
+                            <img id="reportPhotoPreview"
+                                 class="report-photo-preview"
+                                 src="" alt="Water report preview"
+                                 style="display:none;">
+                        </div>
+
+                        <div class="report-form-group">
+                            <label for="reportDescription">
+                                📝 Problem Description
+                            </label>
+                            <textarea id="reportDescription" rows="5"
+                                      placeholder="Describe the dirty-water problem..."></textarea>
+                        </div>
+
+                        <div class="report-form-group">
+                            <label>🛰 GPS Location</label>
+
+                            <button type="button"
+                                    class="report-location-button"
+                                    id="captureReportLocation">
+                                📍 Capture My Location
+                            </button>
+
+                            <div id="reportLocationStatus"
+                                 class="report-location-status">
+                                GPS location not captured yet.
+                            </div>
+                        </div>
+
+                        <button type="button"
+                                id="submitWaterReport"
+                                class="report-submit-button">
+                            🚨 Submit Water Report
+                        </button>
+
+                        <button type="button"
+                                id="shareWaterReport"
+                                class="report-share-button"
+                                disabled>
+                            💬 Send Photo + Report by Message
+                        </button>
+
+                        <small class="report-share-note">
+                            On mobile, this opens the phone share menu so the photo can be sent through Messages, WhatsApp or another messaging app.
+                        </small>
+
+                    </div>
+
+                    <div class="citizen-report-list-card">
+
+                        <div class="report-list-header">
+                            <div>
+                                <h3>🏛 Government / Supervisor View</h3>
+                                <p>Recent citizen water complaints</p>
+                            </div>
+
+                            <button type="button"
+                                    id="refreshCitizenReports"
+                                    class="report-refresh-button">
+                                ↻ Refresh
+                            </button>
+                        </div>
+
+                        <div id="citizenReportsList"
+                             class="citizen-reports-list">
+                            <div class="citizen-report-empty">
+                                <div class="empty-report-icon">💧</div>
+                                <h3>Loading Reports...</h3>
+                                <p>Citizen reports will appear here.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- =================================================
+                 8 ANALYTICS
+            ================================================== -->
+
+            <section
+                class="analytics-section"
+                id="analytics"
+            >
+
+
+                <div class="section-heading">
+
+                    <h2>
+                        Advanced Analytics & AI Prediction
+                    </h2>
+
+                    <span>
+                        REAL-TIME INTELLIGENCE
+                    </span>
+
+                </div>
+
+
+                <div class="analytics-overview">
+
+
+                    <div class="analytics-card">
+
+                        <div class="analytics-icon">
+                            💧
+                        </div>
+
+                        <div>
+
+                            <small>
+                                WATER QUALITY INDEX
+                            </small>
+
+                            <strong id="wqiValue">
+                                90
+                            </strong>
+
+                            <span id="wqiStatus">
+                                GOOD
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="analytics-card">
+
+                        <div class="analytics-icon">
+                            🔮
+                        </div>
+
+                        <div>
+
+                            <small>
+                                AI RISK PREDICTION
+                            </small>
+
+                            <strong id="predictionValue">
+                                LOW
+                            </strong>
+
+                            <span id="predictionTime">
+                                Next 15 min
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="analytics-card">
+
+                        <div class="analytics-icon">
+                            🦟
+                        </div>
+
+                        <div>
+
+                            <small>
+                                VECTOR RISK
+                            </small>
+
+                            <strong id="vectorRiskValue">
+                                5
+                            </strong>
+
+                            <span id="vectorRiskStatus">
+                                LOW
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="analytics-card"
+                        id="system-health"
+                    >
+
+                        <div class="analytics-icon">
+                            ⚡
+                        </div>
+
+                        <div>
+
+                            <small>
+                                SYSTEM HEALTH
+                            </small>
+
+                            <strong id="systemHealthValue">
+                                100%
+                            </strong>
+
+                            <span>
+                                7 / 7 Sensors
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- =================================================
+                     9 AI PREDICTION
+                ================================================== -->
+
+                <div
+                    class="prediction-panel"
+                    id="ai-prediction"
+                >
+
+
+                    <div class="prediction-header">
+
+
+                        <div>
+
+                            <strong>
+                                🧠 AI Water Risk Prediction
+                            </strong>
+
+                            <small>
+                                Short-term trend intelligence based on current sensor behaviour
+                            </small>
+
+                        </div>
+
+
+                        <div
+                            class="prediction-badge"
+                            id="predictionBadge"
+                        >
+                            AI ACTIVE
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="prediction-grid">
+
+
+                        <div class="prediction-box">
+
+                            <span>
+                                CURRENT RISK
+                            </span>
+
+                            <strong id="currentRiskPrediction">
+                                12 / 100
+                            </strong>
+
+                        </div>
+
+
+                        <div class="prediction-box">
+
+                            <span>
+                                TREND
+                            </span>
+
+                            <strong id="riskTrendPrediction">
+                                STABLE
+                            </strong>
+
+                        </div>
+
+
+                        <div class="prediction-box">
+
+                            <span>
+                                FORECAST
+                            </span>
+
+                            <strong id="riskForecast">
+                                LOW RISK
+                            </strong>
+
+                        </div>
+
+
+                        <div class="prediction-box">
+
+                            <span>
+                                CONFIDENCE
+                            </span>
+
+                            <strong id="predictionConfidence">
+                                92%
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="prediction-message">
+
+                        <span>
+                            AI PREDICTION
+                        </span>
+
+                        <strong id="predictionMessage">
+                            Current sensor behaviour indicates stable water conditions.
+                        </strong>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- =================================================
+                     10 SENSOR PERFORMANCE
+                ================================================== -->
+
+                <div
+                    class="sensor-performance"
+                    id="sensor-performance"
+                >
+
+
+                    <div class="performance-header">
+
+
+                        <div>
+
+                            <strong>
+                                📡 Sensor Performance
+                            </strong>
+
+                            <small>
+                                Live data quality and sensor reliability
+                            </small>
+
+                        </div>
+
+
+                        <strong id="sensorNetworkHealth">
+                            100%
+                        </strong>
+
+
+                    </div>
+
+
+                    <div class="performance-grid">
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                pH
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="phHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="phHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                Turbidity
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="turbidityHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="turbidityHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                TDS / EC
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="tdsHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="tdsHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                Temperature
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="temperatureHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="temperatureHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                Water Level
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="waterLevelHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="waterLevelHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                Rainfall
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="rainfallHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="rainfallHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="performance-item">
+
+                            <span>
+                                Dissolved Oxygen
+                            </span>
+
+                            <div class="performance-bar">
+
+                                <div
+                                    id="doHealthBar"
+                                    style="width:100%"
+                                ></div>
+
+                            </div>
+
+                            <strong id="doHealthValue">
+                                100%
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- =================================================
+                     11 WATER RISK TREND
+                ================================================== -->
+
+                <div
+                    class="chart-card"
+                    id="water-risk-trend"
+                >
+
+
+                    <div class="chart-title">
+
+
+                        <div>
+
+                            <strong>
+                                📈 Water Risk Trend
+                            </strong>
+
+                            <small>
+                                Last 20 AI risk readings
+                            </small>
+
+                        </div>
+
+
+                        <span>
+                            LIVE
+                        </span>
+
+
+                    </div>
+
+
+                    <canvas
+                        id="waterChart"
+                    ></canvas>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 12 HISTORICAL RISK
+            ================================================== -->
+
+            <section
+                id="historical-risk"
+                class="historical-risk-anchor"
+                style="
+                    margin-top:24px;
+                    min-height:20px;
+                "
+            >
+
+                <div class="section-heading">
+
+                    <h2>
+                        Historical Risk
+                    </h2>
+
+                    <span>
+                        FIRESTORE HISTORY
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="historicalRiskContainer"
+                    class="historical-risk-container"
+                ></div>
+
+
+            </section>
+
+
+            <!-- =================================================
+                 FOOTER
+            ================================================== -->
+
+            <footer>
+
+
+                <span>
+
+                    <strong>
+                        JAL-DRISHTI AI
+                    </strong>
+
+                </span>
+
+
+                <span>
+
+                    Developed by
+
+                    <strong>
+                        CIVIL AQUA
+                    </strong>
+
+                </span>
+
+
+                <span>
+                    IoT • AI • GIS • Early Warning
+                </span>
+
+
+                <span id="lastUpdate">
+                    Updated --
+                </span>
+
+
+            </footer>
+
+
+        </main>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         LEAFLET JS
+    ====================================================== -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+
+
+    <!-- =====================================================
+         FIXED PERSONAL NAVIGATION
+    ====================================================== -->
+
+    <script>
+
+        (function () {
+
+
+            const navigation =
+                document.getElementById(
+                    "jalMainNavigation"
+                );
+
+
+            if (!navigation) {
+
+                return;
+
+            }
+
+
+            const buttons =
+                navigation.querySelectorAll(
+                    "button[data-target]"
+                );
+
+
+            /* =================================================
+               EXACT TARGET MAP
+            ================================================= */
+
+            const targetMap = {
+
+                "dashboard":
+                    "dashboard",
+
+                "ai-scenario":
+                    "ai-scenario",
+
+                "live-sensors":
+                    "live-sensors",
+
+                "ai-intelligence":
+                    "ai-intelligence",
+
+                "water-fingerprint":
+                    "water-fingerprint",
+
+                "smart-alerts":
+                    "smart-alerts",
+
+                "gis-monitoring":
+                    "gis-monitoring",
+
+                "analytics":
+                    "analytics",
+
+                "ai-prediction":
+                    "ai-prediction",
+
+                "sensor-performance":
+                    "sensor-performance",
+
+                "water-risk-trend":
+                    "water-risk-trend",
+
+                "historical-risk":
+                    "historical-risk",
+
+                "system-health":
+                    "system-health"
+
+            };
+
+
+            /* =================================================
+               HIGHLIGHT
+            ================================================= */
+
+            function highlight(
+                target
+            ) {
+
+
+                if (!target) {
+
+                    return;
+
+                }
+
+
+                document
+                    .querySelectorAll(
+                        ".jal-section-highlight"
+                    )
+                    .forEach(
+                        function (element) {
+
+                            element.classList.remove(
+                                "jal-section-highlight"
+                            );
+
+                        }
+                    );
+
+
+                void target.offsetWidth;
+
+
+                target.classList.add(
+                    "jal-section-highlight"
+                );
+
+
+                setTimeout(
+                    function () {
+
+                        target.classList.remove(
+                            "jal-section-highlight"
+                        );
+
+                    },
+                    3000
+                );
+
+            }
+
+
+            /* =================================================
+               ACTIVE BUTTON
+            ================================================= */
+
+            function activateButton(
+                button
+            ) {
+
+
+                buttons.forEach(
+                    function (item) {
+
+                        item.classList.remove(
+                            "active"
+                        );
+
+                    }
+                );
+
+
+                button.classList.add(
+                    "active"
+                );
+
+            }
+
+
+            /* =================================================
+               CLICK HANDLER
+               CAPTURE MODE PREVENTS OLD
+               SCRIPT.JS NAVIGATION CONFLICT
+            ================================================= */
+
+            navigation.addEventListener(
+                "click",
+                function (event) {
+
+
+                    const button =
+                        event.target.closest(
+                            "button[data-target]"
+                        );
+
+
+                    if (!button) {
+
+                        return;
+
+                    }
+
+
+                    const targetId =
+                        button.getAttribute(
+                            "data-target"
+                        );
+
+
+                    const exactId =
+                        targetMap[targetId];
+
+
+                    if (!exactId) {
+
+                        return;
+
+                    }
+
+
+                    const target =
+                        document.getElementById(
+                            exactId
+                        );
+
+
+                    if (!target) {
+
+                        console.warn(
+                            "JAL-DRISHTI AI: Target not found:",
+                            exactId
+                        );
+
+                        return;
+
+                    }
+
+
+                    /* STOP OLD NAVIGATION */
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    event.stopImmediatePropagation();
+
+
+                    /* ACTIVE */
+
+                    activateButton(
+                        button
+                    );
+
+
+                    /* DASHBOARD */
+
+                    if (
+                        targetId ===
+                        "dashboard"
+                    ) {
+
+
+                        window.scrollTo({
+
+                            top: 0,
+
+                            behavior:
+                                "smooth"
+
+                        });
+
+
+                        setTimeout(
+                            function () {
+
+                                highlight(
+                                    target
+                                );
+
+                            },
+                            400
+                        );
+
+
+                        return;
+
+                    }
+
+
+                    /* EXACT SECTION */
+
+                    target.scrollIntoView({
+
+                        behavior:
+                            "smooth",
+
+                        block:
+                            "start"
+
+                    });
+
+
+                    setTimeout(
+                        function () {
+
+                            highlight(
+                                target
+                            );
+
+                        },
+                        450
+                    );
+
+
+                },
+                true
+            );
+
+
+            /* =================================================
+               SCROLL ACTIVE STATE
+            ================================================= */
+
+            const sectionIds = [
+
+                "ai-scenario",
+
+                "live-sensors",
+
+                "ai-intelligence",
+
+                "water-fingerprint",
+
+                "smart-alerts",
+
+                "gis-monitoring",
+
+                "analytics",
+
+                "ai-prediction",
+
+                "sensor-performance",
+
+                "water-risk-trend",
+
+                "historical-risk",
+
+                "system-health"
+
+            ];
+
+
+            const sections = [];
+
+
+            sectionIds.forEach(
+                function (id) {
+
+
+                    const element =
+                        document.getElementById(
+                            id
+                        );
+
+
+                    const button =
+                        navigation.querySelector(
+                            'button[data-target="' +
+                            id +
+                            '"]'
+                        );
+
+
+                    if (
+                        element &&
+                        button
+                    ) {
+
+
+                        sections.push({
+
+                            element:
+                                element,
+
+                            button:
+                                button
+
+                        });
+
+                    }
+
+                }
+            );
+
+
+            /* =================================================
+               INTERSECTION OBSERVER
+            ================================================= */
+
+            if (
+                "IntersectionObserver"
+                in window
+            ) {
+
+
+                const observer =
+                    new IntersectionObserver(
+
+                        function (entries) {
+
+
+                            entries.forEach(
+                                function (
+                                    entry
+                                ) {
+
+
+                                    if (
+                                        !entry.isIntersecting
+                                    ) {
+
+                                        return;
+
+                                    }
+
+
+                                    const current =
+                                        sections.find(
+                                            function (
+                                                item
+                                            ) {
+
+                                                return (
+                                                    item.element ===
+                                                    entry.target
+                                                );
+
+                                            }
+                                        );
+
+
+                                    if (
+                                        !current
+                                    ) {
+
+                                        return;
+
+                                    }
+
+
+                                    buttons.forEach(
+                                        function (
+                                            button
+                                        ) {
+
+                                            button.classList.remove(
+                                                "active"
+                                            );
+
+                                        }
+                                    );
+
+
+                                    current.button.classList.add(
+                                        "active"
+                                    );
+
+
+                                }
+                            );
+
+
+                        },
+
+
+                        {
+
+                            root:
+                                null,
+
+                            rootMargin:
+                                "-12% 0px -72% 0px",
+
+                            threshold:
+                                0.05
+
+                        }
+
+                    );
+
+
+                sections.forEach(
+                    function (
+                        item
+                    ) {
+
+                        observer.observe(
+                            item.element
+                        );
+
+                    }
+                );
+
+
+            }
+
+
+            console.log(
+                "JAL-DRISHTI AI: Exact 13-section navigation active."
+            );
+
+
+        })();
+
+    </script>
+
+
+    <!-- =====================================================
+         FIREBASE
+    ====================================================== -->
+
+    <script type="module">
+
+
+        import {
+            initializeApp
+        } from
+        "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+
+
+        import {
+            getFirestore
+        } from
+        "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+
+        const firebaseConfig = {
+
+            apiKey:
+                "AIzaSyCZTD0EmbAEK4Wxn306OSj6z1FLud_BNhs",
+
+            authDomain:
+                "civil-aqua-jal-drishti-ai.firebaseapp.com",
+
+            projectId:
+                "civil-aqua-jal-drishti-ai",
+
+            storageBucket:
+                "civil-aqua-jal-drishti-ai.firebasestorage.app",
+
+            messagingSenderId:
+                "1077387989368",
+
+            appId:
+                "1:1077387989368:web:75aa5600c82cd48a06788d"
+
+        };
+
+
+        const app =
+            initializeApp(
+                firebaseConfig
+            );
+
+
+        const db =
+            getFirestore(
+                app
+            );
+
+
+        window.firebaseDB =
+            db;
+
+
+        window.firebaseReady =
+            true;
+
+
+        console.log(
+            "Firebase connected successfully"
+        );
+
+
+        console.log(
+            "Firestore connected successfully"
+        );
+
+
+        /* =================================================
+           LOAD SCRIPT.JS
+        ================================================== */
+
+        const mainScript =
+            document.createElement(
+                "script"
+            );
+
+
+        mainScript.src =
+            "script.js";
+
+
+        document.body.appendChild(
+            mainScript
+        );
+
+
+    </script>
+
+
+</body>
+
+</html>
