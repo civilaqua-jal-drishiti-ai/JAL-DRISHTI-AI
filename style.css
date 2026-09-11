@@ -4533,3 +4533,55 @@ footer strong {
     font-weight: 800;
     transition: opacity 0.2s ease;
 }
+
+/* Sidebar Menu Toggle */
+#sidebarMenuToggle {
+    width: 42px;
+    height: 34px;
+    min-height: 34px;
+    margin: 8px auto 6px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(8,191,255,.10);
+    border: 1px solid rgba(8,191,255,.25);
+    border-radius: 9px;
+
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+#sidebarMenuToggle:hover {
+    background: rgba(8,191,255,.18);
+    border-color: var(--blue);
+    transform: scale(1.04);
+}
+
+.sidebar.sidebar-collapsed {
+    width: 70px !important;
+}
+
+.sidebar.sidebar-collapsed .logo > div:last-child,
+.sidebar.sidebar-collapsed .sidebar nav button span {
+    display: none !important;
+}
+
+.sidebar.sidebar-collapsed .logo {
+    justify-content: center;
+}
+
+.sidebar.sidebar-collapsed .sidebar nav button {
+    justify-content: center;
+    padding: 9px 0;
+}
+
+.sidebar.sidebar-collapsed #sidebarMenuToggle {
+    transform: rotate(180deg);
+}
