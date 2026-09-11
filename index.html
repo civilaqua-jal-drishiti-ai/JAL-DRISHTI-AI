@@ -871,6 +871,9 @@
         ================================================== -->
 
         <aside class="sidebar">
+            <button type="button" id="sidebarMenuToggle" aria-label="Toggle Sidebar">
+    ☰
+</button>
 
 
             <!-- LOGO -->
@@ -2391,7 +2394,7 @@
 
 
                             <button
-                                onclick="zoomToVisnagar()"
+                               onclick="window.JAL_DRISHTI_FINAL_PATCH.part3.searchPlace('Visnagar')"
                                 type="button"
                             >
                                 📍 Visnagar
@@ -2407,7 +2410,7 @@
 
 
                             <button
-                                onclick="zoomToVillage()"
+                                onclick="window.JAL_DRISHTI_FINAL_PATCH.part3.searchPlace('Visnagar')"
                                 type="button"
                             >
                                 🔍 Village View
@@ -2415,10 +2418,11 @@
 
 
                             <button
-                                onclick="showMyLiveLocation()"
-                                type="button"
-                            >
-                                📍 My Live Location
+    onclick="window.JAL_DRISHTI_FINAL_PATCH.part3.locateUser(true)"
+    type="button"
+>
+    📍 My Live Location
+</button>
                             </button>
 
 
@@ -3260,6 +3264,8 @@
 
                 "smart-alerts":
                     "smart-alerts",
+                    "sms-alert-numbers":
+    "sms-alert-numbers",
 
                 "gis-monitoring":
                     "gis-monitoring",
@@ -3477,6 +3483,9 @@
 
                     /* EXACT SECTION */
 
+                    if (targetId === "sms-alert-numbers") {
+    target.scrollIntoView({ behavior:"smooth", block:"start" });
+}
                     target.scrollIntoView({
 
                         behavior:
