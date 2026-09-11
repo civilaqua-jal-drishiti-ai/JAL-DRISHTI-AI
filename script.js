@@ -910,7 +910,7 @@ jdSaveSensorHistoryToFirestore(record);
 
     let jdHistoryModal = null;
     let jdLastHistoryCaptureAt = 0;
-const JD_HISTORY_SAVE_INTERVAL = 10000;
+const JD_HISTORY_SAVE_INTERVAL = 5000;
     let jdSelectedSensor = "temperature";
     let jdSelectedDate =
         jdLocalDate();
@@ -2662,40 +2662,42 @@ if (phValue !== undefined) {
 
     function p2Sensors() {
 
-       const sensors =
-    window.liveSensorData;
+     const currentSensors =
+    typeof sensors !== "undefined"
+        ? sensors
+        : window.sensors;
 
-if (!sensors) {
+if (!currentSensors) {
     return null;
 }
 
         return {
             ph: p2Num(
-                sensors.ph
+                currentSensors.ph
             ),
 
             turbidity: p2Num(
-                sensors.turbidity
+                currentSensors.turbidity
             ),
 
             tds: p2Num(
-                sensors.tds
+                currentSensors.tds
             ),
 
             temperature: p2Num(
-                sensors.temperature
+                currentSensors.temperature
             ),
 
             waterLevel: p2Num(
-                sensors.waterLevel
+                currentSensors.waterLevel
             ),
 
             rainfall: p2Num(
-                sensors.rainfall
+                currentSensors.rainfall
             ),
 
             do: p2Num(
-                sensors.do
+                currentSensors.do
             )
         };
     }
@@ -2796,18 +2798,78 @@ if (!sensors) {
 
     function p2UpdateFingerprint() {
 
-        const scores =
-            p2FingerprintScores();
+        const live =
+    window.liveSensorData || {};
 
-        const s =
-            p2Sensors();
+const s = {
+    ph: Number(
+        live.ph ??
+        live.pH ??
+        live.PH ??
+        0
+    ),
 
-        if (
-            !scores ||
-            !s
-        ) {
-            return;
-        }
+    turbidity: Number(
+        live.turbidity ?? 0
+    ),
+
+    tds: Number(
+        live.tds ?? 0
+    ),
+
+    temperature: Number(
+        live.temperature ?? 0
+    ),
+
+    do: Number(
+        live.DO ??
+        live.dissolvedOxygen ??
+        live.dissolved_oxygen ??
+        0
+    )
+};
+
+const scores = {
+    ph: Math.max(
+        0,
+        Math.min(
+            100,
+            100 - Math.abs(s.ph - 7) * 25
+        )
+    ),
+
+    turbidity: Math.max(
+        0,
+        Math.min(
+            100,
+            100 - s.turbidity * 1.5
+        )
+    ),
+
+    tds: Math.max(
+        0,
+        Math.min(
+            100,
+            100 - Math.max(0, s.tds - 300) * 0.15
+        )
+    ),
+
+    temperature: Math.max(
+        0,
+        Math.min(
+            100,
+            100 - Math.abs(s.temperature - 25) * 5
+        )
+    ),
+
+    do: Math.max(
+        0,
+        Math.min(
+            100,
+            s.do * 12
+        )
+    )
+};
 
         const mapping = {
 
@@ -2922,6 +2984,8 @@ if (key === "do") {
                     scores.do
                 ) / 5
             );
+            p2Get("fingerprintScore").textContent =
+    total;
 
 
         const message =
@@ -3248,6 +3312,9 @@ if (key === "do") {
 
         const s =
             p2Sensors();
+            if (s) {
+    s.tds = Number(document.getElementById("tdsValue")?.textContent);
+}
 
         if (!s) {
             return [];
@@ -3315,8 +3382,11 @@ if (key === "do") {
                             item.key,
                             item.value
                         );
+                        if (item.key === "tds") {
+    console.log("TDS:", item.value, "STATUS:", status);
+}
 
-                    return {
+                    return { 
                         ...item,
                         status:
                             status,
@@ -3365,6 +3435,36 @@ if (key === "do") {
 
         const alerts =
             p2BuildAlerts();
+            const tdsElement = document.getElementById("tdsValue");
+const liveTds = tdsElement ? Number(tdsElement.textContent) : NaN;
+
+if (Number.isFinite(liveTds)) {
+    const tdsStatus = p2Status("tds", liveTds);
+
+    const tdsIndex = alerts.findIndex(function (a) {
+        return a.key === "tds";
+    });
+
+    if (tdsStatus !== "Normal") {
+        const tdsAlert = {
+            key: "tds",
+            label: "TDS",
+            value: liveTds,
+            unit: " ppm",
+            status: tdsStatus,
+            reason: p2AlertReason("tds", liveTds, tdsStatus),
+            action: p2Action("tds", tdsStatus)
+        };
+
+        if (tdsIndex >= 0) {
+            alerts[tdsIndex] = tdsAlert;
+        } else {
+            alerts.push(tdsAlert);
+        }
+    } else if (tdsIndex >= 0) {
+        alerts.splice(tdsIndex, 1);
+    }
+}
 
         const critical =
             alerts.filter(
@@ -4219,6 +4319,10 @@ if (key === "do") {
                     </canvas>
 
                 </div>
+                <div
+    id="jdHistoricalRiskData"
+    class="jd-historical-risk-data">
+</div>
 
             </div>
         `;
@@ -4350,6 +4454,85 @@ if (key === "do") {
 
         const history =
             p2RiskHistory();
+            /* LIVE RISK DATA CAPTURE */
+try {
+    const live = window.liveSensorData || {};
+
+    const now = Date.now();
+
+    if (
+        p2DrawRiskTrend.lastCapture === undefined ||
+        now - p2DrawRiskTrend.lastCapture >= 5000
+    ) {
+
+        const current = {
+            ph: Number(live.ph ?? live.pH ?? live.PH ?? 0),
+            turbidity: Number(live.turbidity ?? 0),
+            tds: Number(live.tds ?? 0),
+            temperature: Number(live.temperature ?? 0),
+            waterLevel: Number(live.waterLevel ?? 0),
+            rainfall: Number(live.rain ?? 0),
+            do: Number(
+                live.DO ??
+                live.dissolvedOxygen ??
+                live.dissolved_oxygen ??
+                0
+            )
+        };
+
+        let risk = 0;
+
+        if (current.ph < 6.5 || current.ph > 8.5) risk += 22;
+        else if (current.ph < 6.8 || current.ph > 8.2) risk += 8;
+
+        if (current.turbidity > 1500) risk += 25;
+        else if (current.turbidity > 800) risk += 12;
+
+        if (current.tds > 2500) risk += 20;
+        else if (current.tds > 1000) risk += 10;
+
+        if (current.temperature < 15 || current.temperature > 40) risk += 12;
+        else if (current.temperature < 20 || current.temperature > 35) risk += 5;
+
+        if (current.waterLevel > 90 || current.waterLevel < 15) risk += 15;
+        else if (current.waterLevel > 80 || current.waterLevel < 25) risk += 7;
+
+        if (current.rainfall > 40) risk += 12;
+        else if (current.rainfall > 15) risk += 5;
+
+        if (current.do < 4) risk += 20;
+        else if (current.do < 5.5) risk += 10;
+
+        risk = Math.min(100, Math.max(0, Math.round(risk)));
+
+        history.push({
+            timestamp: now,
+            date: p2DateKey(new Date(now)),
+            time: new Date(now).toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            }),
+            risk: risk
+        });
+
+        if (history.length > 20000) {
+            history.splice(0, history.length - 20000);
+        }
+
+        p2Save(
+            "jalDrishtiExtendedRiskHistory",
+            history
+        );
+
+        p2DrawRiskTrend.lastCapture = now;
+    }
+} catch (error) {
+    console.warn(
+        "Live risk capture error:",
+        error
+    );
+}
 
 
         const records =
@@ -4533,6 +4716,55 @@ if (key === "do") {
             records
         );
     }
+            /* ================= LAST 50 RISK DATA ================= */
+
+        const dataContainer =
+            p2Get("jdHistoricalRiskData");
+
+        if (dataContainer) {
+
+            const latest50 =
+                records.slice(-50).reverse();
+
+            if (!latest50.length) {
+
+                dataContainer.innerHTML = "";
+
+            } else {
+
+                dataContainer.innerHTML = `
+                    <div class="jd-historical-risk-data">
+                        <div class="jd-historical-risk-data-title">
+                            Latest 50 Risk Readings
+                        </div>
+
+                        <div class="jd-historical-risk-data-list">
+
+                            ${latest50.map(function (item) {
+
+                                return `
+                                    <div class="jd-risk-data-row">
+
+                                        <span>
+                                            ${item.time || "--"}
+                                        </span>
+
+                                        <strong>
+                                            ${Math.round(
+                                                p2Num(item.risk)
+                                            )}
+                                        </strong>
+
+                                    </div>
+                                `;
+
+                            }).join("")}
+
+                        </div>
+                    </div>
+                `;
+            }
+        }
 
 
     function p2DrawHistoricalRiskCanvas(
@@ -4954,6 +5186,7 @@ if (key === "do") {
 
         try {
             p2UpdateSmartAlerts();
+            p2UpdateTDSSensorStatus();
         } catch (error) {
             console.warn(
                 "Smart alert update error:",
@@ -4994,7 +5227,28 @@ if (key === "do") {
             );
         }
     }
+function p2UpdateTDSSensorStatus() {
+    const tdsValue = document.getElementById("tdsValue");
+    const tdsStatus = document.getElementById("tdsStatus");
 
+    if (!tdsValue || !tdsStatus) {
+        return;
+    }
+
+    const value = Number(tdsValue.textContent);
+
+    if (!Number.isFinite(value)) {
+        return;
+    }
+
+    const status = p2Status("tds", value);
+
+    tdsStatus.textContent = status.toUpperCase();
+
+    tdsStatus.className =
+        "sensor-status " +
+        status.toLowerCase();
+}
 
     /* =====================================================
        6. PATCH updateDashboard
@@ -5419,11 +5673,11 @@ if (key === "do") {
     let p3MapReady = false;
 
 
-    const P3_DEFAULT_LAT =
-        23.0550;
+   const P3_DEFAULT_LAT =
+    23.698552;
 
-    const P3_DEFAULT_LNG =
-        72.6340;
+const P3_DEFAULT_LNG =
+    72.552098;
 
 
     function p3InitializeMap() {
@@ -5478,7 +5732,8 @@ if (key === "do") {
                 mapElement,
                 {
                     zoomControl: true,
-                    attributionControl: true
+                    attributionControl: true,
+                    scrollWheelZoom: false
                 }
             )
             .setView(
@@ -5488,6 +5743,30 @@ if (key === "do") {
                 ],
                 10
             );
+                    /* MOUSE WHEEL ZOOM ONLY */
+
+        mapElement.addEventListener(
+            "wheel",
+            function(event) {
+
+                if (Math.abs(event.deltaY) < 50) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (event.deltaY < 0) {
+                    p3Map.zoomIn();
+                } else {
+                    p3Map.zoomOut();
+                }
+
+            },
+            {
+                passive: false
+            }
+        );
 
 
         /*
@@ -5700,6 +5979,40 @@ if (key === "do") {
 
     function p3AddMapLayerControl() {
 
+        function p3ToggleBuildings() {
+
+    if (!p3Map) {
+        return;
+    }
+
+    if (
+        p3BuildingLayer &&
+        p3Map.hasLayer(p3BuildingLayer)
+    ) {
+
+        p3Map.removeLayer(
+            p3BuildingLayer
+        );
+
+        return;
+    }
+
+    if (!p3BuildingLayer) {
+
+        p3BuildingLayer =
+            L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+                {
+                    maxZoom: 19,
+                    opacity: 0.65
+                }
+            );
+    }
+
+    p3BuildingLayer.addTo(
+        p3Map
+    );
+}
         if (!p3Map) {
             return;
         }
@@ -5745,7 +6058,7 @@ if (key === "do") {
                 `
                 <div class="
                     jd-current-location-arrow
-                ">
+                " style="color:red;">
                     ↑
                 </div>
                 `,
@@ -5775,7 +6088,7 @@ if (key === "do") {
         }
 
 
-        navigator.geolocation.getCurrentPosition(
+        navigator.geolocation.watchPosition(
 
             function (
                 position
@@ -6453,6 +6766,14 @@ if (key === "do") {
             lng:
                 72.5470
         },
+        {
+    name:
+        "Sankalchand Patel University, Visnagar, Gujarat",
+    lat:
+        23.6848917,
+    lng:
+        72.5470583
+},
 
         {
             name:
@@ -7051,8 +7372,8 @@ if (key === "do") {
 
                     return (
                         place.name
-                            .toLowerCase() ===
-                        text
+    .toLowerCase()
+    .includes(text)
                     );
                 }
             );
@@ -9802,6 +10123,7 @@ if (key === "do") {
     ...(window.liveSensorData || {}),
     ...data
 };
+
         if (typeof sensors !== "undefined" && sensors) {
             console.log("SENSORS OBJECT:", sensors);
 
@@ -9837,6 +10159,9 @@ if (key === "do") {
         data.dissolved_oxygen ??
         sensors.do;
 }
+        if (typeof p2UpdateSmartAlerts === "function") {
+            p2UpdateSmartAlerts();
+        }
 
         /* pH */
         if (data.ph !== undefined ||
@@ -9886,7 +10211,8 @@ if (key === "do") {
                 data.dissolvedOxygen ??
                 data.dissolved_oxygen;
 
-            setLiveValue("doValue", value, 2);
+            
+          
             /* =========================================================
    LIVE WATER FINGERPRINT
    ========================================================= */
@@ -10020,6 +10346,45 @@ if (liveDO !== undefined) {
         2
     );
 }
+/* =========================================================
+   LIVE WATER RISK + HISTORICAL DATA
+   ========================================================= */
+
+try {
+    if (
+        window.JAL_DRISHTI_FINAL_PATCH &&
+        window.JAL_DRISHTI_FINAL_PATCH.part1
+    ) {
+        window.JAL_DRISHTI_FINAL_PATCH
+            .part1
+            .captureHistory();
+    }
+} catch (error) {
+    console.warn(
+        "Live history capture error:",
+        error
+    );
+}
+
+try {
+    if (
+        window.JAL_DRISHTI_FINAL_PATCH &&
+        window.JAL_DRISHTI_FINAL_PATCH.part2
+    ) {
+        window.JAL_DRISHTI_FINAL_PATCH
+            .part2
+            .drawRiskTrend();
+
+        window.JAL_DRISHTI_FINAL_PATCH
+            .part2
+            .renderHistoricalRisk();
+    }
+} catch (error) {
+    console.warn(
+        "Live risk refresh error:",
+        error
+    );
+}
         }
 
         /* Optional trend update */
@@ -10115,3 +10480,245 @@ if (liveDO !== undefined) {
     );
 
 })();
+
+/* =========================================================
+   SMS ALERT NUMBERS
+   ========================================================= */
+
+(function () {
+    "use strict";
+
+    const SMS_STORAGE_KEY =
+        "jalDrishtiSmsAlertNumbers";
+
+    function loadSmsNumbers() {
+        try {
+            const data =
+                JSON.parse(
+                    localStorage.getItem(
+                        SMS_STORAGE_KEY
+                    ) || "[]"
+                );
+
+            return Array.isArray(data)
+                ? data
+                : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function saveSmsNumbers(numbers) {
+        localStorage.setItem(
+            SMS_STORAGE_KEY,
+            JSON.stringify(numbers)
+        );
+    }
+
+    function renderSmsNumbers() {
+
+        const list =
+            document.getElementById(
+                "smsAlertNumberList"
+            );
+
+        const count =
+            document.getElementById(
+                "smsAlertNumberCount"
+            );
+
+        if (!list || !count) {
+            return;
+        }
+
+        const numbers =
+            loadSmsNumbers();
+
+        count.textContent =
+            numbers.length +
+            (
+                numbers.length === 1
+                    ? " NUMBER"
+                    : " NUMBERS"
+            );
+
+        list.innerHTML = "";
+
+        numbers.forEach(
+            function (number, index) {
+
+                const row =
+                    document.createElement(
+                        "div"
+                    );
+
+                row.innerHTML = `
+                    <span>${number}</span>
+                    <button
+                        type="button"
+                        data-index="${index}"
+                    >Remove</button>
+                `;
+
+                row.querySelector(
+                    "button"
+                ).addEventListener(
+                    "click",
+                    function () {
+
+                        const updated =
+                            loadSmsNumbers();
+
+                        updated.splice(
+                            index,
+                            1
+                        );
+
+                        saveSmsNumbers(
+                            updated
+                        );
+
+                        renderSmsNumbers();
+                    }
+                );
+
+                list.appendChild(row);
+            }
+        );
+    }
+
+    function addSmsNumber() {
+
+        const input =
+            document.getElementById(
+                "smsAlertMobileInput"
+            );
+
+        if (!input) {
+            return;
+        }
+
+        const number =
+            input.value.trim();
+
+        if (!/^[0-9]{10}$/.test(number)) {
+            alert(
+                "Please enter a valid 10-digit mobile number."
+            );
+            return;
+        }
+
+        const numbers =
+            loadSmsNumbers();
+
+        if (numbers.includes(number)) {
+            alert(
+                "This mobile number is already added."
+            );
+            return;
+        }
+
+        numbers.push(number);
+
+        saveSmsNumbers(numbers);
+
+        input.value = "";
+
+        renderSmsNumbers();
+    }
+
+    function initializeSmsNumbers() {
+
+        const button =
+            document.getElementById(
+                "addSmsAlertNumber"
+            );
+
+        if (!button) {
+            return;
+        }
+
+        if (
+            button.dataset
+                .smsReady === "1"
+        ) {
+            return;
+        }
+
+        button.dataset.smsReady =
+            "1";
+
+        button.addEventListener(
+            "click",
+            addSmsNumber
+        );
+
+        renderSmsNumbers();
+    }
+
+    if (
+        document.readyState ===
+        "loading"
+    ) {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializeSmsNumbers,
+            {
+                once: true
+            }
+        );
+
+    } else {
+
+        initializeSmsNumbers();
+    }
+
+})();
+/* =========================================================
+   SMS ALERT TRIGGER
+   ========================================================= */
+
+(function () {
+    "use strict";
+
+    window.JAL_DRISHTI_SMS_ALERT =
+        window.JAL_DRISHTI_SMS_ALERT || {};
+
+    window.JAL_DRISHTI_SMS_ALERT.getNumbers =
+        function () {
+
+            try {
+                return JSON.parse(
+                    localStorage.getItem(
+                        "jalDrishtiSmsAlertNumbers"
+                    ) || "[]"
+                );
+            } catch (error) {
+                return [];
+            }
+        };
+
+    window.JAL_DRISHTI_SMS_ALERT.getAlertData =
+        function () {
+
+            const numbers =
+                window.JAL_DRISHTI_SMS_ALERT
+                    .getNumbers();
+
+            return {
+                recipients: numbers,
+                location: "Visnagar, Gujarat",
+                language: [
+                    "English",
+                    "Hindi",
+                    "Gujarati"
+                ]
+            };
+        };
+
+})();
+document.getElementById("sidebarMenuToggle")?.addEventListener("click", function () {
+    document.querySelector(".sidebar")?.classList.toggle("sidebar-collapsed");
+});
+           
