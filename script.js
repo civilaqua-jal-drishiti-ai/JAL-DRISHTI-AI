@@ -280,6 +280,59 @@
 
     function jdReadSensors() {
 
+    const live =
+        window.liveSensorData || {};
+
+    const current =
+        typeof sensors !== "undefined" &&
+        sensors
+            ? sensors
+            : {};
+
+    return {
+        ph: jdNum(
+            live.ph ??
+            live.pH ??
+            live.PH ??
+            current.ph
+        ),
+
+        turbidity: jdNum(
+            live.turbidity ??
+            current.turbidity
+        ),
+
+        tds: jdNum(
+            live.tds ??
+            current.tds
+        ),
+
+        temperature: jdNum(
+            live.temperature ??
+            current.temperature
+        ),
+
+        waterLevel: jdNum(
+            live.waterLevel ??
+            current.waterLevel
+        ),
+
+        rainfall: jdNum(
+            live.rain ??
+            live.rainfall ??
+            current.rainfall
+        ),
+
+        do: jdNum(
+            live.DO ??
+            live.do ??
+            live.dissolvedOxygen ??
+            live.dissolved_oxygen ??
+            current.do
+        )
+    };
+
+
         if (
             typeof sensors === "undefined" ||
             !sensors
@@ -10123,6 +10176,13 @@ const P3_DEFAULT_LNG =
     ...(window.liveSensorData || {}),
     ...data
 };
+    if (
+        window.JAL_DRISHTI_FINAL_PATCH &&
+        window.JAL_DRISHTI_FINAL_PATCH.part1 &&
+        typeof window.JAL_DRISHTI_FINAL_PATCH.part1.captureHistory === "function"
+    ) {
+        window.JAL_DRISHTI_FINAL_PATCH.part1.captureHistory();
+    }
 
         if (typeof sensors !== "undefined" && sensors) {
             console.log("SENSORS OBJECT:", sensors);
@@ -10211,7 +10271,8 @@ const P3_DEFAULT_LNG =
                 data.dissolvedOxygen ??
                 data.dissolved_oxygen;
 
-            
+             setLiveValue("doValue", value, 2);
+
           
             /* =========================================================
    LIVE WATER FINGERPRINT
@@ -10721,4 +10782,3 @@ try {
 document.getElementById("sidebarMenuToggle")?.addEventListener("click", function () {
     document.querySelector(".sidebar")?.classList.toggle("sidebar-collapsed");
 });
-           
