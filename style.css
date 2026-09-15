@@ -4624,3 +4624,26 @@ footer strong {
 .sidebar.sidebar-collapsed #sidebarMenuToggle {
     transform: rotate(180deg);
 }
+
+/* Google Maps Style Current Location Pin */
+.jd-current-location-pin {
+    width: 44px;
+    height: 44px;
+    background: #ef3b3b;
+    border: 2px solid #b91c1c;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+    position: relative;
+}
+
+.jd-current-location-pin-dot {
+    width: 16px;
+    height: 16px;
+    background: #b91c1c;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
