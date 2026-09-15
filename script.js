@@ -6107,20 +6107,18 @@ const P3_DEFAULT_LNG =
             className:
                 "jd-current-location-marker",
 
-            html:
-                `
-                <div class="
-                    jd-current-location-arrow
-                " style="color:red;">
-                    ↑
-                </div>
-                `,
+           html:
+    `
+    <div class="jd-current-location-pin">
+        <div class="jd-current-location-pin-dot"></div>
+    </div>
+    `,
 
             iconSize:
-                [42, 42],
+                [64, 64],
 
             iconAnchor:
-                [21, 21]
+                [32, 64]
         });
     }
 
@@ -9007,23 +9005,86 @@ const P3_DEFAULT_LNG =
                     };
 
 
-                    const reports =
-                        p3LoadReports();
+                  const reports =
+    p3LoadReports();
 
 
-                    reports.push(
-                        report
-                    );
+reports.push(
+    report
+);
 
 
-                    if (
-                        !p3SaveReports(
-                            reports
-                        )
-                    ) {
+if (
+    !p3SaveReports(
+        reports
+    )
+) {
+    return;
+}
 
-                        return;
-                    }
+
+/* =================================================
+   UPDATE CITIZEN REPORT IN FIRESTORE
+================================================= */
+
+if (
+    window.firebaseDB
+) {
+
+    const {
+        collection,
+        doc,
+        setDoc
+    } =
+        await import(
+            "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js"
+        );
+
+
+    await setDoc(
+        doc(
+            collection(
+                window.firebaseDB,
+                "citizenReports"
+            ),
+            report.id
+        ),
+        report
+    );
+
+}
+
+
+/* =================================================
+   SAVE CITIZEN REPORT TO FIRESTORE
+================================================= */
+
+if (
+    window.firebaseDB
+) {
+
+    const {
+        collection,
+        doc,
+        setDoc
+    } =
+        await import(
+            "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js"
+        );
+
+
+    await setDoc(
+        doc(
+            collection(
+                window.firebaseDB,
+                "citizenReports"
+            ),
+            report.id
+        ),
+        report
+    );
+
+}
 
 
                     alert(
@@ -9329,24 +9390,71 @@ const P3_DEFAULT_LNG =
         }
 
 
-        const reports =
-            p3LoadReports()
-                .sort(
-                    function (
-                        a,
-                        b
-                    ) {
+        const selectedDate =
+    p3Get("citizenReportDate")?.value || "";
 
-                        return (
-                            Number(
-                                b.createdAt
-                            ) -
-                            Number(
-                                a.createdAt
-                            )
-                        );
-                    }
+const allReports =
+    p3LoadReports()
+        .sort(
+            function (
+                a,
+                b
+            ) {
+
+                return (
+                    Number(
+                        b.createdAt
+                    ) -
+                    Number(
+                        a.createdAt
+                    )
                 );
+            }
+        );
+
+const reports =
+    selectedDate
+        ? allReports.filter(
+            function (report) {
+
+                const reportDate =
+                    new Date(
+                        Number(
+                            report.createdAt
+                        )
+                    );
+
+                const year =
+                    reportDate
+                        .getFullYear()
+                        .toString();
+
+                const month =
+                    String(
+                        reportDate.getMonth() + 1
+                    ).padStart(
+                        2,
+                        "0"
+                    );
+
+                const day =
+                    String(
+                        reportDate.getDate()
+                    ).padStart(
+                        2,
+                        "0"
+                    );
+
+                return (
+                    `${year}-${month}-${day}`
+                    === selectedDate
+                );
+            }
+        )
+        : allReports.slice(
+            0,
+            2
+        );
 
 
         if (!reports.length) {
