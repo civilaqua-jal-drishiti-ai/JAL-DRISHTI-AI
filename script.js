@@ -329,6 +329,28 @@
             live.dissolvedOxygen ??
             live.dissolved_oxygen ??
             current.do
+        ),
+
+        orp: jdNum(
+            live.orp ??
+            live.ORP ??
+            current.orp
+        ),
+
+        residualChlorine: jdNum(
+            live.residualChlorine ??
+            live.residual_chlorine ??
+            live.chlorine ??
+            live.freeChlorine ??
+            current.residualChlorine
+        ),
+
+        nitrate: jdNum(
+            live.nitrate ??
+            live.NO3 ??
+            live.no3 ??
+            live.nitrateLevel ??
+            current.nitrate
         )
     };
 
@@ -360,7 +382,10 @@
             temperature: 0.08,
             waterLevel: 0.5,
             rainfall: 0.3,
-            do: 0.05
+            do: 0.05,
+            orp: 2,
+            residualChlorine: 0.01,
+            nitrate: 0.5
         };
 
         const threshold =
@@ -404,7 +429,10 @@
             temperature: "temperatureTrend",
             waterLevel: "waterLevelTrend",
             rainfall: "rainfallTrend",
-            do: "doTrend"
+            do: "doTrend",
+            orp: "orpTrend",
+            residualChlorine: "residualChlorineTrend",
+            nitrate: "nitrateTrend"
         };
 
         Object.keys(ids).forEach(function (type) {
@@ -715,7 +743,10 @@ jdLastHistoryCaptureAt = timestamp;
             temperature: current.temperature,
             waterLevel: current.waterLevel,
             rainfall: current.rainfall,
-            do: current.do
+            do: current.do,
+            orp: current.orp,
+            residualChlorine: current.residualChlorine,
+            nitrate: current.nitrate
         };
 
         let history =
@@ -825,13 +856,11 @@ jdSaveSensorHistoryToFirestore(record);
         }
 
         if (
-            current.waterLevel > 90 ||
-            current.waterLevel < 15
+            Math.abs(current.waterLevel) > 80
         ) {
             risk += 15;
         } else if (
-            current.waterLevel > 80 ||
-            current.waterLevel < 25
+            Math.abs(current.waterLevel) > 20
         ) {
             risk += 7;
         }
@@ -1274,6 +1303,24 @@ const JD_HISTORY_SAVE_INTERVAL = 5000;
                 title: "Dissolved Oxygen Historical Graph",
                 unit: "mg/L",
                 decimals: 2
+            },
+
+            orp: {
+                title: "ORP Historical Graph",
+                unit: "mV",
+                decimals: 0
+            },
+
+            residualChlorine: {
+                title: "Residual Chlorine Historical Graph",
+                unit: "mg/L",
+                decimals: 2
+            },
+
+            nitrate: {
+                title: "Nitrate Historical Graph",
+                unit: "mg/L",
+                decimals: 1
             }
 
         };
@@ -2130,7 +2177,10 @@ function jdRenderHistoryGraphWithReadings(
             "card-temperature": "temperature",
             "card-waterLevel": "waterLevel",
             "card-rainfall": "rainfall",
-            "card-do": "do"
+            "card-do": "do",
+            "card-orp": "orp",
+            "card-residualChlorine": "residualChlorine",
+            "card-nitrate": "nitrate"
         };
 
         Object.keys(
@@ -3803,14 +3853,12 @@ if (Number.isFinite(liveTds)) {
 
 
         if (
-            s.waterLevel > 90 ||
-            s.waterLevel < 15
+            Math.abs(s.waterLevel) > 80
         ) {
             risk += 15;
 
         } else if (
-            s.waterLevel > 80 ||
-            s.waterLevel < 25
+            Math.abs(s.waterLevel) > 20
         ) {
             risk += 7;
         }
@@ -4547,8 +4595,8 @@ try {
         if (current.temperature < 15 || current.temperature > 40) risk += 12;
         else if (current.temperature < 20 || current.temperature > 35) risk += 5;
 
-        if (current.waterLevel > 90 || current.waterLevel < 15) risk += 15;
-        else if (current.waterLevel > 80 || current.waterLevel < 25) risk += 7;
+        if (Math.abs(current.waterLevel) > 80) risk += 15;
+        else if (Math.abs(current.waterLevel) > 20) risk += 7;
 
         if (current.rainfall > 40) risk += 12;
         else if (current.rainfall > 15) risk += 5;
@@ -5796,6 +5844,9 @@ const P3_DEFAULT_LNG =
                 ],
                 10
             );
+
+        window.p3Map = p3Map;
+
                     /* MOUSE WHEEL ZOOM ONLY */
 
         mapElement.addEventListener(
@@ -6005,15 +6056,11 @@ const P3_DEFAULT_LNG =
 
                 marker.bindPopup(
                     `
-                    <strong>
-                        ${p3Escape(
-                            location.name
-                        )}
-                    </strong>
-                    <br>
-                    <span>
-                        JAL-DRISHTI AI Monitoring Location
-                    </span>
+                    <div class="jd-monitoring-popup">
+                        <strong>${p3Escape(location.name)}</strong>
+                        <span>JAL-DRISHTI AI Monitoring Location</span>
+                        <button type="button" onclick="window.jalShowStationPopup && window.jalShowStationPopup(${JSON.stringify(location).replace(/</g, '\u003c')})">View Live Readings</button>
+                    </div>
                     `
                 );
 
@@ -10890,3 +10937,1024 @@ try {
 document.getElementById("sidebarMenuToggle")?.addEventListener("click", function () {
     document.querySelector(".sidebar")?.classList.toggle("sidebar-collapsed");
 });
+
+
+/* =========================================================
+   JAL-DRISHTI AI | ORP + RESIDUAL CHLORINE + NITRATE
+   10-SENSOR EXTENSION
+   ---------------------------------------------------------
+   Adds the 3 requested sensors everywhere:
+   Live Sensors, AI Water Fingerprint, Smart Alert Center,
+   Sensor Performance and historical/live trend support.
+   ========================================================= */
+(function jalTenSensorExtension() {
+    "use strict";
+
+    const SENSOR_DEFS = [
+        { key: "ph", label: "pH", unit: "", decimals: 2 },
+        { key: "turbidity", label: "Turbidity", unit: " NTU", decimals: 1 },
+        { key: "tds", label: "TDS / EC", unit: " ppm", decimals: 0 },
+        { key: "temperature", label: "Water Temperature", unit: " °C", decimals: 1 },
+        { key: "waterLevel", label: "Water Level", unit: " %", decimals: 1 },
+        { key: "rainfall", label: "Rainfall", unit: " mm", decimals: 1 },
+        { key: "do", label: "Dissolved Oxygen", unit: " mg/L", decimals: 2 },
+        { key: "orp", label: "ORP", unit: " mV", decimals: 0 },
+        { key: "residualChlorine", label: "Residual Chlorine", unit: " mg/L", decimals: 2 },
+        { key: "nitrate", label: "Nitrate", unit: " mg/L", decimals: 1 }
+    ];
+
+    const EXTRA = SENSOR_DEFS.slice(7);
+
+    function get(id) { return document.getElementById(id); }
+
+    function number(value, fallback = 0) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
+    function liveValue(key) {
+        const live = window.liveSensorData || {};
+        const sensorsObj = (typeof sensors !== "undefined" && sensors) ? sensors : {};
+        const aliases = {
+            ph: ["ph", "pH", "PH"],
+            turbidity: ["turbidity"],
+            tds: ["tds", "TDS"],
+            temperature: ["temperature", "waterTemperature"],
+            waterLevel: ["waterLevel", "level"],
+            rainfall: ["rain", "rainfall"],
+            do: ["DO", "do", "dissolvedOxygen", "dissolved_oxygen"],
+            orp: ["orp", "ORP", "oxidationReductionPotential", "oxidation_reduction_potential"],
+            residualChlorine: ["residualChlorine", "residual_chlorine", "chlorine", "freeChlorine", "free_chlorine", "Cl2"],
+            nitrate: ["nitrate", "NO3", "no3", "nitrateLevel", "nitrate_level"]
+        };
+        for (const name of (aliases[key] || [key])) {
+            if (live[name] !== undefined && live[name] !== null && Number.isFinite(Number(live[name]))) {
+                return Number(live[name]);
+            }
+        }
+        for (const name of (aliases[key] || [key])) {
+            if (sensorsObj[name] !== undefined && sensorsObj[name] !== null && Number.isFinite(Number(sensorsObj[name]))) {
+                return Number(sensorsObj[name]);
+            }
+        }
+        const el = get(key === "residualChlorine" ? "residualChlorineValue" : key === "orp" ? "orpValue" : key === "nitrate" ? "nitrateValue" : key + "Value");
+        return el ? number(el.textContent, NaN) : NaN;
+    }
+
+    function readAll() {
+        const result = {};
+        SENSOR_DEFS.forEach(s => result[s.key] = liveValue(s.key));
+        return result;
+    }
+
+    // Water Level is a baseline-deviation reading from ESP32: 0% is the reference,
+    // positive/negative values represent change from that reference.
+    function status(key, value) {
+        const v = number(value, NaN);
+        if (!Number.isFinite(v)) return "Warning";
+        if (key === "ph") return v < 6.5 || v > 8.5 ? "Critical" : (v < 6.8 || v > 8.2 ? "Warning" : "Normal");
+        if (key === "turbidity") return v > 1500 ? "Critical" : (v > 800 ? "Warning" : "Normal");
+        if (key === "tds") return v > 2500 ? "Critical" : (v > 1000 ? "Warning" : "Normal");
+        if (key === "temperature") return v < 15 || v > 40 ? "Critical" : (v < 20 || v > 35 ? "Warning" : "Normal");
+        if (key === "waterLevel") return Math.abs(v) > 80 ? "Critical" : (Math.abs(v) > 20 ? "Warning" : "Normal");
+        if (key === "rainfall") return v > 40 ? "Critical" : (v > 15 ? "Warning" : "Normal");
+        if (key === "do") return v < 4 ? "Critical" : (v < 5.5 ? "Warning" : "Normal");
+        if (key === "orp") return v < 150 || v > 550 ? "Critical" : (v < 200 || v > 450 ? "Warning" : "Normal");
+        if (key === "residualChlorine") return v < 0.10 || v > 1.00 ? "Critical" : (v < 0.20 || v > 0.50 ? "Warning" : "Normal");
+        if (key === "nitrate") return v > 50 ? "Critical" : (v > 45 ? "Warning" : "Normal");
+        return "Normal";
+    }
+
+    function format(key, value) {
+        const def = SENSOR_DEFS.find(s => s.key === key) || {};
+        return Number(value).toFixed(def.decimals ?? 2) + (def.unit || "");
+    }
+
+    function updateExtraCards(values) {
+        const ids = {
+            orp: "orpValue",
+            residualChlorine: "residualChlorineValue",
+            nitrate: "nitrateValue"
+        };
+        EXTRA.forEach(def => {
+            const value = values[def.key];
+            if (!Number.isFinite(value)) return;
+            const valueEl = get(ids[def.key]);
+            if (valueEl) valueEl.textContent = value.toFixed(def.decimals);
+            const statusEl = get(def.key + "Status");
+            if (statusEl) {
+                const st = status(def.key, value);
+                statusEl.textContent = st.toUpperCase();
+                statusEl.className = "sensor-status " + st.toLowerCase();
+            }
+        });
+    }
+
+    const previous = {};
+    function updateExtraTrends(values) {
+        EXTRA.forEach(def => {
+            const value = values[def.key];
+            if (!Number.isFinite(value)) return;
+            const prev = previous[def.key];
+            const thresholds = { orp: 2, residualChlorine: 0.01, nitrate: 0.5 };
+            let trend = "→ Stable";
+            if (Number.isFinite(prev)) {
+                const delta = value - prev;
+                if (Math.abs(delta) >= thresholds[def.key]) trend = delta > 0 ? "↑ Increasing" : "↓ Decreasing";
+            }
+            const el = get(def.key + "Trend");
+            if (el) el.textContent = trend;
+            previous[def.key] = value;
+        });
+    }
+
+    function fingerprintScore(key, value) {
+        const v = number(value, NaN);
+        if (!Number.isFinite(v)) return 0;
+        if (key === "ph") return Math.max(0, Math.min(100, 100 - Math.abs(v - 7) * 25));
+        if (key === "turbidity") return Math.max(0, Math.min(100, 100 - v * 1.5));
+        if (key === "tds") return Math.max(0, Math.min(100, 100 - Math.max(0, v - 300) * 0.15));
+        if (key === "temperature") return Math.max(0, Math.min(100, 100 - Math.abs(v - 25) * 5));
+        if (key === "waterLevel") return status(key, v) === "Normal" ? 100 : (status(key, v) === "Warning" ? 60 : 20);
+        if (key === "rainfall") return status(key, v) === "Normal" ? 100 : (status(key, v) === "Warning" ? 60 : 20);
+        if (key === "do") return Math.max(0, Math.min(100, v * 12));
+        if (key === "orp") return status(key, v) === "Normal" ? 100 : (status(key, v) === "Warning" ? 60 : 20);
+        if (key === "residualChlorine") return status(key, v) === "Normal" ? 100 : (status(key, v) === "Warning" ? 60 : 20);
+        if (key === "nitrate") return status(key, v) === "Normal" ? 100 : (status(key, v) === "Warning" ? 60 : 20);
+        return 0;
+    }
+
+    function updateFingerprint(values) {
+        const idMap = {
+            ph: ["phFingerprint", "phFingerprintValue"],
+            turbidity: ["turbidityFingerprint", "turbidityFingerprintValue"],
+            tds: ["tdsFingerprint", "tdsFingerprintValue"],
+            temperature: ["temperatureFingerprint", "temperatureFingerprintValue"],
+            waterLevel: ["waterLevelFingerprint", "waterLevelFingerprintValue"],
+            rainfall: ["rainfallFingerprint", "rainfallFingerprintValue"],
+            do: ["doFingerprint", "doFingerprintValue"],
+            orp: ["orpFingerprint", "orpFingerprintValue"],
+            residualChlorine: ["residualChlorineFingerprint", "residualChlorineFingerprintValue"],
+            nitrate: ["nitrateFingerprint", "nitrateFingerprintValue"]
+        };
+        const scores = [];
+        SENSOR_DEFS.forEach(def => {
+            const value = values[def.key];
+            if (!Number.isFinite(value)) return;
+            const score = Math.round(fingerprintScore(def.key, value));
+            scores.push(score);
+            const ids = idMap[def.key];
+            if (!ids) return;
+            const bar = get(ids[0]);
+            const val = get(ids[1]);
+            if (bar) bar.style.width = score + "%";
+            if (val) val.textContent = format(def.key, value);
+        });
+        if (scores.length) {
+            const total = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+            const scoreEl = get("fingerprintScore");
+            if (scoreEl) scoreEl.textContent = total;
+            const msg = get("fingerprintMessage");
+            if (msg) msg.textContent = total >= 80
+                ? "AI Water Fingerprint: 10-sensor water pattern is currently stable."
+                : total >= 60
+                    ? "AI Water Fingerprint: 10-sensor pattern is moderate. Continue monitoring."
+                    : total >= 40
+                        ? "AI Water Fingerprint: One or more water parameters require attention."
+                        : "AI Water Fingerprint: Critical multi-sensor water conditions detected.";
+        }
+    }
+
+    function updateAlerts(values) {
+        const alerts = [];
+        SENSOR_DEFS.forEach(def => {
+            const value = values[def.key];
+            if (!Number.isFinite(value)) return;
+            const st = status(def.key, value);
+            if (st !== "Normal") {
+                alerts.push({
+                    label: def.label,
+                    value: format(def.key, value),
+                    status: st,
+                    reason: `${def.label} requires attention at ${format(def.key, value)}.`,
+                    action: st === "Critical" ? "Immediate inspection and sensor/source verification recommended." : "Continue monitoring and inspect if the condition persists."
+                });
+            }
+        });
+        const critical = alerts.filter(a => a.status === "Critical").length;
+        const warning = alerts.filter(a => a.status === "Warning").length;
+        const normal = Math.max(0, 10 - critical - warning);
+        if (get("criticalCount")) get("criticalCount").textContent = critical;
+        if (get("warningCount")) get("warningCount").textContent = warning;
+        if (get("normalCount")) get("normalCount").textContent = normal;
+        const list = get("smartAlertList");
+        if (!list) return;
+        if (!alerts.length) {
+            list.innerHTML = `<div class="jd-live-alert-empty"><div class="jd-live-alert-icon">✓</div><div><strong>All 10 sensors normal</strong><span>No active water-quality alerts detected.</span></div></div>`;
+            return;
+        }
+        list.innerHTML = alerts.map(a => {
+            const cls = a.status.toLowerCase();
+            const icon = a.status === "Critical" ? "🚨" : "⚠️";
+            return `<div class="jd-live-alert ${cls}"><div class="jd-live-alert-icon">${icon}</div><div class="jd-live-alert-content"><div class="jd-live-alert-top"><strong>${a.label}</strong><span class="jd-live-alert-status ${cls}">${a.status.toUpperCase()}</span></div><div class="jd-live-alert-value">${a.value}</div><div class="jd-live-alert-reason">${a.reason}</div><div class="jd-live-alert-action">${a.action}</div></div></div>`;
+        }).join("");
+    }
+
+    function updatePerformance(values) {
+        const healthValues = {};
+        SENSOR_DEFS.forEach(def => {
+            const value = values[def.key];
+            healthValues[def.key] = Number.isFinite(value) ? (status(def.key, value) === "Critical" ? 75 : status(def.key, value) === "Warning" ? 90 : 100) : 0;
+        });
+        SENSOR_DEFS.forEach(def => {
+            const bar = get(def.key + "HealthBar");
+            const text = get(def.key + "HealthValue");
+            if (bar) bar.style.width = healthValues[def.key] + "%";
+            if (text) text.textContent = healthValues[def.key] + "%";
+        });
+        const vals = Object.values(healthValues);
+        const avg = vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length) : 0;
+        const network = get("sensorNetworkHealth");
+        if (network) network.textContent = avg + "%";
+    }
+
+    const HISTORY_KEY = "jalDrishtiExtendedSensorHistory";
+    let lastHistoryWrite = 0;
+    function captureExtraHistory(values) {
+        const now = Date.now();
+        if (now - lastHistoryWrite < 1000) return;
+        lastHistoryWrite = now;
+        try {
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+            const record = {
+                timestamp: now,
+                date: new Date(now).toISOString().slice(0,10),
+                time: new Date(now).toLocaleTimeString("en-IN", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
+                ...values
+            };
+            const last = history[history.length - 1];
+            if (last && now - Number(last.timestamp || 0) < 4500) {
+                Object.assign(last, values, { timestamp: now, date: record.date, time: record.time });
+            } else {
+                history.push(record);
+            }
+            if (history.length > 20000) history = history.slice(-20000);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        } catch (e) {
+            console.warn("10-sensor history save error:", e);
+        }
+    }
+
+    function renderExtraHistory(key) {
+        try {
+            const date = new Date().toISOString().slice(0, 10);
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]")
+                .filter(item => item.date === date && Number.isFinite(Number(item[key])));
+            const defs = {
+                orp: { title: "ORP Historical Graph", unit: "mV", decimals: 0 },
+                residualChlorine: { title: "Residual Chlorine Historical Graph", unit: "mg/L", decimals: 2 },
+                nitrate: { title: "Nitrate Historical Graph", unit: "mg/L", decimals: 1 }
+            };
+            const def = defs[key];
+            if (!def) return;
+            const title = get("jdHistoryTitle");
+            const subtitle = get("jdHistorySubtitle");
+            const info = get("jdHistoryInfo");
+            const stats = get("jdHistoryStats");
+            const canvas = get("jdHistoryCanvas");
+            if (title) title.textContent = def.title;
+            if (subtitle) subtitle.textContent = date;
+            if (info) info.textContent = history.length ? `${history.length} live readings found` : "No live readings available for today";
+            const values = history.map(item => Number(item[key])).filter(Number.isFinite);
+            if (stats) {
+                if (!values.length) {
+                    stats.innerHTML = '<div class="jd-stat-box"><span>Readings</span><strong>0</strong></div>';
+                } else {
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const avg = values.reduce((a,b) => a+b, 0) / values.length;
+                    stats.innerHTML = `<div class="jd-stat-box"><span>Readings</span><strong>${values.length}</strong></div><div class="jd-stat-box"><span>Minimum</span><strong>${min.toFixed(def.decimals)} ${def.unit}</strong></div><div class="jd-stat-box"><span>Average</span><strong>${avg.toFixed(def.decimals)} ${def.unit}</strong></div><div class="jd-stat-box"><span>Maximum</span><strong>${max.toFixed(def.decimals)} ${def.unit}</strong></div>`;
+                }
+            }
+            if (!canvas || !values.length) return;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(700, Math.floor(rect.width || 1000));
+            const height = 420;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr; canvas.height = height * dpr; canvas.style.height = height + "px";
+            ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,width,height);
+            const light = document.documentElement.classList.contains("light-theme");
+            const textColor = light ? "#263238" : "#dce7ef";
+            const gridColor = light ? "rgba(30,60,80,.12)" : "rgba(180,210,225,.14)";
+            const lineColor = light ? "#1976d2" : "#4fc3f7";
+            const fillColor = light ? "rgba(25,118,210,.12)" : "rgba(79,195,247,.10)";
+            const left=65,right=25,top=30,bottom=55,cw=width-left-right,ch=height-top-bottom;
+            let min=Math.min(...values), max=Math.max(...values); if(min===max){min-=1;max+=1;} const pad=(max-min)*0.12; min-=pad; max+=pad;
+            ctx.strokeStyle=gridColor; ctx.fillStyle=textColor; ctx.lineWidth=1; ctx.font="11px Arial"; ctx.textAlign="right"; ctx.textBaseline="middle";
+            for(let i=0;i<=5;i++){ const y=top+ch*i/5; ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(width-right,y); ctx.stroke(); ctx.fillText((max-(max-min)*i/5).toFixed(def.decimals),left-10,y); }
+            const pts=history.map((item,i)=>{ const v=Number(item[key]); const x=history.length===1?left+cw/2:left+(i/(history.length-1))*cw; const y=top+ch-((v-min)/(max-min))*ch; return {x,y}; });
+            ctx.beginPath(); ctx.moveTo(pts[0].x,top+ch); pts.forEach(pt=>ctx.lineTo(pt.x,pt.y)); ctx.lineTo(pts[pts.length-1].x,top+ch); ctx.closePath(); ctx.fillStyle=fillColor; ctx.fill();
+            ctx.beginPath(); pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y)); ctx.strokeStyle=lineColor; ctx.lineWidth=2.5; ctx.stroke();
+            ctx.fillStyle=lineColor; pts.forEach(pt=>{ctx.beginPath();ctx.arc(pt.x,pt.y,3.5,0,Math.PI*2);ctx.fill();});
+            ctx.fillStyle=textColor; ctx.font="10px Arial"; ctx.textAlign="center"; ctx.textBaseline="top"; const step=Math.max(1,Math.ceil(history.length/6));
+            history.forEach((item,i)=>{if(i%step!==0&&i!==history.length-1)return; const pt=pts[i];ctx.fillText(item.time||"",pt.x,height-bottom+10);});
+        } catch (e) { console.warn("Extra sensor graph error:", e); }
+    }
+
+    function bindExtraCards() {
+        const cards = [
+            ["card-orp", "orp"],
+            ["card-residualChlorine", "residualChlorine"],
+            ["card-nitrate", "nitrate"]
+        ];
+        cards.forEach(([id, key]) => {
+            const card = get(id);
+            if (!card || card.dataset.jd10Capture === "1") return;
+            card.dataset.jd10Capture = "1";
+            card.addEventListener("click", function(event) {
+                if (event.target && (event.target.closest("button") || event.target.closest("input") || event.target.closest("select") || event.target.closest("a"))) return;
+                if (window.JAL_DRISHTI_FINAL_PATCH?.part1?.openHistory) {
+                    window.JAL_DRISHTI_FINAL_PATCH.part1.openHistory(key);
+                    setTimeout(() => renderExtraHistory(key), 250);
+                    setTimeout(() => renderExtraHistory(key), 900);
+                }
+            }, true);
+        });
+    }
+
+    function run() {
+        bindExtraCards();
+        const values = readAll();
+        updateExtraCards(values);
+        updateExtraTrends(values);
+        updateFingerprint(values);
+        updateAlerts(values);
+        updatePerformance(values);
+        captureExtraHistory(values);
+    }
+
+    function start() {
+        run();
+        setInterval(run, 800);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start, { once: true });
+    } else {
+        start();
+    }
+})();
+
+
+/* =========================================================
+   JAL-DRISHTI AI | LIVE AI + LOCATION LOGIC
+   ONLY functional additions. Existing design/layout untouched.
+   ========================================================= */
+(function(){
+    "use strict";
+
+    const JD10 = [
+        {key:"ph", label:"pH", unit:"", dec:2},
+        {key:"turbidity", label:"Turbidity", unit:" NTU", dec:0},
+        {key:"tds", label:"TDS / EC", unit:" ppm", dec:0},
+        {key:"temperature", label:"Temperature", unit:" °C", dec:2},
+        {key:"waterLevel", label:"Water Level", unit:" %", dec:1},
+        {key:"rainfall", label:"Rainfall", unit:" mm", dec:1},
+        {key:"do", label:"Dissolved Oxygen", unit:" mg/L", dec:2},
+        {key:"orp", label:"ORP", unit:" mV", dec:0},
+        {key:"residualChlorine", label:"Residual Chlorine", unit:" mg/L", dec:2},
+        {key:"nitrate", label:"Nitrate", unit:" mg/L", dec:1}
+    ];
+
+    const alias = {
+        ph:["ph","pH","PH"], turbidity:["turbidity"], tds:["tds","TDS"],
+        temperature:["temperature","waterTemperature"], waterLevel:["waterLevel","level"],
+        rainfall:["rainfall","rain"], do:["do","DO","dissolvedOxygen","dissolved_oxygen"],
+        orp:["orp","ORP","oxidationReductionPotential","oxidation_reduction_potential"],
+        residualChlorine:["residualChlorine","residual_chlorine","chlorine","freeChlorine","free_chlorine","Cl2"],
+        nitrate:["nitrate","NO3","no3","nitrateLevel","nitrate_level"]
+    };
+
+    const thresholds = {
+        ph:v=>v<6.5||v>8.5?"Critical":v<6.8||v>8.2?"Warning":"Normal",
+        turbidity:v=>v>1500?"Critical":v>800?"Warning":"Normal",
+        tds:v=>v>2500?"Critical":v>1000?"Warning":"Normal",
+        temperature:v=>v<15||v>40?"Critical":v<20||v>35?"Warning":"Normal",
+        waterLevel:v=>Math.abs(v)>80?"Critical":Math.abs(v)>20?"Warning":"Normal",
+        rainfall:v=>v>40?"Critical":v>15?"Warning":"Normal",
+        do:v=>v<4?"Critical":v<5.5?"Warning":"Normal",
+        orp:v=>v<150||v>550?"Critical":v<200||v>450?"Warning":"Normal",
+        residualChlorine:v=>v<0.10||v>1.00?"Critical":v<0.20||v>0.50?"Warning":"Normal",
+        nitrate:v=>v>50?"Critical":v>45?"Warning":"Normal"
+    };
+
+    const solution = {
+        ph:{
+            Critical:"Verify pH probe calibration, inspect the water source and correct treatment chemistry before use.",
+            Warning:"Recheck pH calibration and continue close monitoring of the source."
+        },
+        turbidity:{
+            Critical:"Inspect the source immediately and check filtration/coagulation performance; verify the turbidity probe.",
+            Warning:"Inspect source clarity and filtration performance and continue monitoring."
+        },
+        tds:{
+            Critical:"Verify TDS/EC calibration and investigate dissolved-salt contamination before use.",
+            Warning:"Recheck TDS/EC calibration and investigate the source if the value remains elevated."
+        },
+        temperature:{
+            Critical:"Inspect abnormal thermal conditions and verify the temperature probe and water-source conditions.",
+            Warning:"Continue monitoring temperature and inspect the source if the deviation persists."
+        },
+        waterLevel:{
+            Critical:"Inspect the water level/source immediately and verify the ESP32 water-level sensor/reference.",
+            Warning:"Monitor the level closely and verify the sensor/reference if the change persists."
+        },
+        rainfall:{
+            Critical:"Inspect the monitored catchment/source for rainfall-driven contamination and increase monitoring.",
+            Warning:"Increase monitoring because rainfall can change water-quality conditions."
+        },
+        do:{
+            Critical:"Inspect the source for oxygen depletion and organic contamination; verify the DO sensor.",
+            Warning:"Increase monitoring of oxygen conditions and inspect the source if DO remains low."
+        },
+        orp:{
+            Critical:"Verify ORP probe calibration and inspect source oxidation/reduction conditions before use.",
+            Warning:"Recheck ORP calibration and continue source monitoring."
+        },
+        residualChlorine:{
+            Critical:"Verify chlorine dosing and probe calibration; investigate disinfection performance immediately.",
+            Warning:"Recheck dosing/probe calibration and continue monitoring residual chlorine."
+        },
+        nitrate:{
+            Critical:"Verify nitrate sensor calibration and investigate possible nutrient/agricultural contamination.",
+            Warning:"Recheck nitrate measurement and investigate the source if elevated values persist."
+        }
+    };
+
+    function num(v){ const n=Number(v); return Number.isFinite(n)?n:NaN; }
+    function get(id){return document.getElementById(id);}
+    function readSensors(){
+        const live=window.liveSensorData||{};
+        const s=(typeof sensors!=="undefined"&&sensors)?sensors:{};
+        const out={};
+        JD10.forEach(d=>{
+            let v=NaN;
+            for(const k of (alias[d.key]||[d.key])){
+                if(live[k]!==undefined){v=num(live[k]); if(Number.isFinite(v))break;}
+            }
+            if(!Number.isFinite(v)){
+                for(const k of (alias[d.key]||[d.key])){
+                    if(s[k]!==undefined){v=num(s[k]); if(Number.isFinite(v))break;}
+                }
+            }
+            out[d.key]=v;
+        });
+        return out;
+    }
+    function st(key,v){
+        const n=num(v);
+        if(!Number.isFinite(n))return "Warning";
+        return thresholds[key](n);
+    }
+    function fmt(d,v){return Number(v).toFixed(d.dec)+(d.unit||"");}
+
+    function qualityScore(values){
+        const scores=[];
+        JD10.forEach(d=>{
+            const v=values[d.key]; if(!Number.isFinite(v))return;
+            const s=st(d.key,v);
+            scores.push(s==="Normal"?100:s==="Warning"?60:20);
+        });
+        return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+    }
+    function riskScore(values){
+        const scores=[];
+        JD10.forEach(d=>{
+            const v=values[d.key]; if(!Number.isFinite(v))return;
+            const s=st(d.key,v);
+            scores.push(s==="Critical"?25:s==="Warning"?10:0);
+        });
+        let risk=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*4):0;
+        const abnormal=scores.filter(x=>x>0).length;
+        risk=Math.min(100,risk+Math.min(20,abnormal*2));
+        return risk;
+    }
+    function vectorRisk(v){
+        let r=0;
+        if(Number.isFinite(v.waterLevel)){
+            if(Math.abs(v.waterLevel)>80)r+=28;
+            else if(Math.abs(v.waterLevel)>20)r+=14;
+        }
+        if(Number.isFinite(v.rainfall)){
+            if(v.rainfall>40)r+=30;
+            else if(v.rainfall>15)r+=15;
+        }
+        if(Number.isFinite(v.temperature)){
+            if(v.temperature>35)r+=18;
+            else if(v.temperature>30)r+=8;
+        }
+        if(Number.isFinite(v.turbidity)&&v.turbidity>20)r+=12;
+        if(Number.isFinite(v.do)&&v.do<5.5)r+=10;
+        return Math.min(100,Math.round(r));
+    }
+
+    function riskLabel(r){return r>=70?"CRITICAL":r>=35?"WARNING":"LOW";}
+    function forecast(r,trend){ if(r>=70)return "HIGH RISK"; if(r>=35)return "ELEVATED RISK"; if(trend==="RISING")return "RISK RISING"; return "LOW RISK"; }
+
+    let lastRisk=null, lastTime=0;
+    function updateAI(){
+        const v=readSensors();
+        const valid=JD10.filter(d=>Number.isFinite(v[d.key]));
+        if(!valid.length)return;
+
+        const counts={Critical:0,Warning:0,Normal:0};
+        const abnormal=[];
+        valid.forEach(d=>{
+            const s=st(d.key,v[d.key]); counts[s]++;
+            if(s!=="Normal") abnormal.push({def:d,value:v[d.key],status:s});
+        });
+
+        // Single source of truth for alert counts.
+        if(get("criticalCount"))get("criticalCount").textContent=counts.Critical;
+        if(get("warningCount"))get("warningCount").textContent=counts.Warning;
+        if(get("normalCount"))get("normalCount").textContent=counts.Normal;
+
+        // WHAT / WHY / WHAT NEXT
+        let what="All monitored water parameters are currently within configured ranges.";
+        let why="All available sensor readings are inside their configured operating ranges.";
+        let next="Continue real-time monitoring.";
+        if(abnormal.length){
+            const critical=abnormal.filter(x=>x.status==="Critical");
+            const focus=critical.length?critical:abnormal;
+            what=focus.length===1
+                ? `${focus[0].def.label} is ${focus[0].status.toLowerCase()} at ${fmt(focus[0].def,focus[0].value)}.`
+                : `${focus.length} sensor parameters require attention (${focus.map(x=>x.def.label).join(", ")}).`;
+            why=focus.slice(0,3).map(x=>`${x.def.label}: ${fmt(x.def,x.value)} (${x.status}).`).join(" ");
+            next=focus.slice(0,2).map(x=>solution[x.def.key]?.[x.status]||"Inspect the sensor and monitored water source.").join(" ");
+        }
+        if(get("aiWhat"))get("aiWhat").textContent=what;
+        if(get("aiWhy"))get("aiWhy").textContent=why;
+        if(get("aiAction"))get("aiAction").textContent=next;
+
+        // Smart alerts: same counts + reading-specific action + 3 languages.
+        const list=get("smartAlertList");
+        const location=window.JD_SELECTED_LOCATION||{localLanguage:"Gujarati"};
+        const local=location.localLanguage||"Gujarati";
+        const alerts=abnormal;
+        if(list){
+            list.innerHTML=alerts.length?alerts.map(x=>{
+                const action=solution[x.def.key]?.[x.status]||"Inspect the sensor and monitored water source.";
+                const msgs=localMessages(x.def,x.value,x.status,local,action);
+                const cls=x.status.toLowerCase();
+                return `<div class="jd-live-alert ${cls}">
+                    <div class="jd-live-alert-icon">${x.status==="Critical"?"🚨":"⚠️"}</div>
+                    <div class="jd-live-alert-content">
+                        <div class="jd-live-alert-top"><strong>${x.def.label}</strong><span class="jd-live-alert-status ${cls}">${x.status.toUpperCase()}</span></div>
+                        <div class="jd-live-alert-value">${fmt(x.def,x.value)}</div>
+                        <div class="jd-live-alert-reason"><strong>English:</strong> ${msgs.en}</div>
+                        <div class="jd-live-alert-action"><b>Action:</b> ${action}</div>
+                        <div class="jd-alert-language"><strong>Hindi:</strong> ${msgs.hi}<br><strong>${local}:</strong> ${msgs.local}</div>
+                    </div>
+                </div>`;
+            }).join(""):`<div class="jd-live-alert-empty"><div class="jd-live-alert-icon">✓</div><div><strong>All ${valid.length} available sensors normal</strong><span>No active water-quality alerts detected.</span></div></div>`;
+        }
+
+        // Advanced analytics
+        const wqi=qualityScore(v);
+        const risk=riskScore(v);
+        const trend=lastRisk===null?"STABLE":risk>lastRisk+3?"RISING":risk<lastRisk-3?"FALLING":"STABLE";
+        const forecastText=forecast(risk,trend);
+        const vr=vectorRisk(v);
+
+        if(get("wqiValue"))get("wqiValue").textContent=wqi;
+        if(get("wqiStatus"))get("wqiStatus").textContent=wqi>=80?"GOOD":wqi>=60?"MODERATE":wqi>=40?"WARNING":"CRITICAL";
+        if(get("predictionValue"))get("predictionValue").textContent=riskLabel(risk);
+        if(get("predictionTime"))get("predictionTime").textContent="Next 15 min";
+        if(get("vectorRiskValue"))get("vectorRiskValue").textContent=vr;
+        if(get("vectorRiskStatus"))get("vectorRiskStatus").textContent=vr>=70?"HIGH":vr>=35?"MEDIUM":"LOW";
+        if(get("currentRiskPrediction"))get("currentRiskPrediction").textContent=`${risk} / 100`;
+        if(get("riskTrendPrediction"))get("riskTrendPrediction").textContent=trend;
+        if(get("riskForecast"))get("riskForecast").textContent=forecastText;
+        const confidence=Math.max(45,Math.min(99,Math.round((valid.length/10)*85+(valid.length?15:0))));
+        if(get("riskConfidence"))get("riskConfidence").textContent=confidence+"%";
+        if(get("predictionConfidence"))get("predictionConfidence").textContent=confidence+"%";
+        if(get("systemHealthValue"))get("systemHealthValue").textContent=Math.round((valid.length/10)*100)+"%";
+        const healthSpan=get("system-health")?.querySelector("span");
+        if(healthSpan)healthSpan.textContent=`${valid.length} / 10 Sensors`;
+
+        const predMsg=get("riskPredictionText")||get("aiPredictionText")||get("predictionDescription");
+        if(predMsg)predMsg.textContent=abnormal.length
+            ? `${abnormal.length} sensor condition(s) require attention. Forecast is ${forecastText.toLowerCase()}.`
+            : "Current 10-sensor behaviour indicates stable water conditions.";
+
+        lastRisk=risk; lastTime=Date.now();
+    }
+
+    function localMessages(def,value,status,local,action){
+        const v=fmt(def,value);
+        const en=status==="Critical"
+            ? `${def.label} is critical at ${v}. Immediate inspection is recommended.`
+            : `${def.label} is in warning range at ${v}. Close monitoring is recommended.`;
+
+        const hi=status==="Critical"
+            ? `${def.label} का मान ${v} है और स्थिति गंभीर है। तुरंत जाँच आवश्यक है।`
+            : `${def.label} का मान ${v} है और चेतावनी सीमा में है। निगरानी बढ़ाएँ।`;
+
+        const gu=status==="Critical"
+            ? `${def.label}નું રીડિંગ ${v} છે અને સ્થિતિ ગંભીર છે. તાત્કાલિક તપાસ જરૂરી છે.`
+            : `${def.label}નું રીડિંગ ${v} છે અને ચેતવણી સ્થિતિમાં છે. નજીકથી મોનિટર કરો.`;
+        const mr=status==="Critical"?`${def.label} चे रीडिंग ${v} आहे आणि स्थिती गंभीर आहे. तात्काळ तपासणी आवश्यक आहे.`:`${def.label} चे रीडिंग ${v} आहे आणि चेतावणी स्थितीत आहे. निरीक्षण वाढवा.`;
+        const bn=status==="Critical"?`${def.label} এর মান ${v}; অবস্থা গুরুতর। অবিলম্বে পরীক্ষা প্রয়োজন।`:`${def.label} এর মান ${v}; সতর্কতা সীমায় আছে। নজরদারি বাড়ান।`;
+        const ta=status==="Critical"?`${def.label} அளவு ${v}; நிலைமை தீவிரம். உடனடி பரிசோதனை அவசியம்.`:`${def.label} அளவு ${v}; எச்சரிக்கை நிலை. கண்காணிப்பை அதிகரிக்கவும்.`;
+        const te=status==="Critical"?`${def.label} reading ${v}; hali ni mbaya. Ukaguzi wa haraka unahitajika.`:`${def.label} reading ${v}; iko kwenye tahadhari. Endelea kufuatilia.`;
+        const kn=status==="Critical"?`${def.label} ಮೌಲ್ಯ ${v}; ಸ್ಥಿತಿ ಗಂಭೀರವಾಗಿದೆ. ತಕ್ಷಣ ಪರಿಶೀಲನೆ ಅಗತ್ಯ.`:`${def.label} ಮೌಲ್ಯ ${v}; ಎಚ್ಚರಿಕೆ ಮಿತಿಯಲ್ಲಿದೆ. ಮೇಲ್ವಿಚಾರಣೆ ಹೆಚ್ಚಿಸಿ.`;
+        const ml=status==="Critical"?`${def.label} മൂല്യം ${v}; സ്ഥിതി ഗുരുതരമാണ്. ഉടൻ പരിശോധന ആവശ്യമാണ്.`:`${def.label} മൂല്യം ${v}; മുന്നറിയിപ്പ് പരിധിയിലാണ്. നിരീക്ഷണം വർധിപ്പിക്കുക.`;
+        const pa=status==="Critical"?`${def.label} ਦਾ ਰੀਡਿੰਗ ${v}; ਸਥਿਤੀ ਗੰਭੀਰ ਹੈ। ਤੁਰੰਤ ਜਾਂਚ ਜ਼ਰੂਰੀ ਹੈ।`:`${def.label} ਦਾ ਰੀਡਿੰਗ ${v}; ਚੇਤਾਵਨੀ ਸੀਮਾ ਵਿੱਚ ਹੈ। ਨਿਗਰਾਨੀ ਵਧਾਓ।`;
+        const od=status==="Critical"?`${def.label} ରିଡିଂ ${v}; ସ୍ଥିତି ଗୁରୁତର। ତୁରନ୍ତ ଯାଞ୍ଚ ଆବଶ୍ୟକ।`:`${def.label} ରିଡିଂ ${v}; ସତର୍କତା ସୀମାରେ ଅଛି। ନିରୀକ୍ଷଣ ବଢାନ୍ତୁ।`;
+        const as=status==="Critical"?`${def.label} ৰিডিং ${v}; অৱস্থা গুৰুতৰ। তৎক্ষণাত পৰীক্ষা প্ৰয়োজন।`:`${def.label} ৰিডিং ${v}; সতৰ্কতা সীমাত আছে। নিৰীক্ষণ বৃদ্ধি কৰক।`;
+
+        const map={Gujarati:gu,Marathi:mr,Bengali:bn,Tamil:ta,Telugu:te,Kannada:kn,Malayalam:ml,Punjabi:pa,Odia:od,Assamese:as,Hindi:hi};
+        return {en,hi,local:map[local]||gu};
+    }
+
+    /* ---------- location detection ---------- */
+    const langByState={
+        Gujarat:"Gujarati",Maharashtra:"Marathi","West Bengal":"Bengali","Tamil Nadu":"Tamil",
+        Telangana:"Telugu","Andhra Pradesh":"Telugu",Karnataka:"Kannada",Kerala:"Malayalam",
+        Punjab:"Punjabi",Odisha:"Odia",Assam:"Assamese",Bihar:"Hindi",Jharkhand:"Hindi",
+        Rajasthan:"Hindi",Delhi:"Hindi",Haryana:"Hindi","Uttar Pradesh":"Hindi",
+        Uttarakhand:"Hindi","Madhya Pradesh":"Hindi",Chhattisgarh:"Hindi","Himachal Pradesh":"Hindi",
+        Goa:"Konkani",Jammu:"Hindi",Kashmir:"Hindi"
+    };
+    function languageFromAddress(a){
+        return langByState[a?.state]||((a?.country||"").toLowerCase()==="india"?"Hindi":"English");
+    }
+    async function reverseLocation(lat,lon){
+        try{
+            const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=18&addressdetails=1`,{headers:{Accept:"application/json"}});
+            if(!r.ok)throw new Error("Reverse geocode failed");
+            const d=await r.json();
+            const a=d.address||{};
+            return {
+                name:a.village||a.town||a.city||a.municipality||a.county||a.state||d.display_name||"Selected location",
+                state:a.state||"",country:a.country||"",localLanguage:languageFromAddress(a),lat,lon,display:d.display_name||""
+            };
+        }catch(e){
+            return {name:`${lat.toFixed(5)}, ${lon.toFixed(5)}`,state:"",country:"India",localLanguage:"Hindi",lat,lon};
+        }
+    }
+    function saveLocation(loc){
+        window.JD_SELECTED_LOCATION=loc;
+        try{localStorage.setItem("jalDrishtiMonitoringLocation",JSON.stringify(loc));}catch(e){}
+        const name=get("jdSelectedLocation"), lang=get("jdLocalLanguage");
+        if(name)name.textContent=loc.name||"Selected location";
+        if(lang)lang.textContent=`Local language: ${loc.localLanguage||"Hindi"}`;
+        document.dispatchEvent(new CustomEvent("jal:locationchange",{detail:loc}));
+        updateAI();
+    }
+    async function useCurrent(){
+        if(!navigator.geolocation){
+            alert("Current location is not available in this browser. Please use manual location.");
+            return;
+        }
+        const btn=get("jdCurrentLocationBtn"); if(btn)btn.disabled=true;
+        navigator.geolocation.getCurrentPosition(async pos=>{
+            const loc=await reverseLocation(pos.coords.latitude,pos.coords.longitude);
+            saveLocation(loc);
+            if(btn)btn.disabled=false;
+        },()=>{
+            if(btn)btn.disabled=false;
+            alert("Location permission was not granted. Please use Manual Location.");
+        },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+    }
+    async function searchManual(){
+        const input=get("jdManualLocationInput"), results=get("jdLocationResults");
+        const q=input?.value.trim(); if(!q||!results)return;
+        results.style.display="block"; results.innerHTML=`<div class="jd-location-result">Searching...</div>`;
+        try{
+            const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=in&q=${encodeURIComponent(q)}`,{headers:{Accept:"application/json"}});
+            const data=await r.json();
+            results.innerHTML="";
+            if(!data.length){results.innerHTML=`<div class="jd-location-result">No location found. Try another city, village or area.</div>`;return;}
+            data.forEach(item=>{
+                const b=document.createElement("button"); b.type="button"; b.className="jd-location-result";
+                const a=item.address||{};
+                const loc={name:a.village||a.town||a.city||a.municipality||a.county||a.state||item.display_name,state:a.state||"",country:a.country||"India",localLanguage:languageFromAddress(a),lat:Number(item.lat),lon:Number(item.lon),display:item.display_name};
+                b.textContent=item.display_name;
+                b.addEventListener("click",()=>{saveLocation(loc);results.style.display="none";});
+                results.appendChild(b);
+            });
+        }catch(e){results.innerHTML=`<div class="jd-location-result">Location search unavailable. Try again.</div>`;}
+    }
+    function initLocation(){
+        let saved=null;
+        try{saved=JSON.parse(localStorage.getItem("jalDrishtiMonitoringLocation")||"null");}catch(e){}
+        if(saved)saveLocation(saved);
+        const c=get("jdCurrentLocationBtn"), s=get("jdManualLocationBtn"), i=get("jdManualLocationInput");
+        if(c)c.addEventListener("click",useCurrent);
+        if(s)s.addEventListener("click",searchManual);
+        if(i)i.addEventListener("keydown",e=>{if(e.key==="Enter")searchManual();});
+        document.addEventListener("click",e=>{
+            const bar=get("jdLocationBar"), res=get("jdLocationResults");
+            if(res&&bar&&!bar.contains(e.target))res.style.display="none";
+        });
+    }
+
+    function start(){
+        initLocation();
+        updateAI();
+        setInterval(updateAI,1000);
+
+        // Keep the Smart Alert Center on the same live 10-sensor
+        // calculation even if an older dashboard routine redraws it.
+        const alertList=get("smartAlertList");
+        if(alertList && window.MutationObserver){
+            let internal=false;
+            const observer=new MutationObserver(()=>{
+                if(internal)return;
+                setTimeout(()=>{
+                    internal=true;
+                    try{ updateAI(); } finally { internal=false; }
+                },20);
+            });
+            observer.observe(alertList,{childList:true,subtree:true});
+        }
+    }
+    if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});
+    else start();
+})();
+
+/* =========================================================
+   JAL-DRISHTI AI | MONITORING STATION LIVE READING VIEW
+   ---------------------------------------------------------
+   Keeps the existing map/design unchanged. Clicking a
+   JAL-DRISHTI AI marker shows the currently available
+   10-sensor network reading and the selected location.
+   If station-specific Firestore metadata exists, it is used;
+   otherwise the connected live sensor stream is shown.
+   ========================================================= */
+(function () {
+    "use strict";
+
+    const defs = [
+        ["ph", "pH", ""],
+        ["turbidity", "Turbidity", " NTU"],
+        ["tds", "TDS / EC", " ppm"],
+        ["temperature", "Water Temperature", " °C"],
+        ["waterLevel", "Water Level", " %"],
+        ["rainfall", "Rainfall", " mm"],
+        ["do", "Dissolved Oxygen", " mg/L"],
+        ["orp", "ORP", " mV"],
+        ["residualChlorine", "Residual Chlorine", " mg/L"],
+        ["nitrate", "Nitrate", " mg/L"]
+    ];
+
+    function esc(v) {
+        return String(v ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function currentValues() {
+        const live = window.liveSensorData || {};
+        const s = (typeof sensors !== "undefined" && sensors) ? sensors : {};
+        const aliases = {
+            ph: ["ph", "pH", "PH"],
+            turbidity: ["turbidity"],
+            tds: ["tds", "TDS"],
+            temperature: ["temperature", "waterTemperature"],
+            waterLevel: ["waterLevel", "level"],
+            rainfall: ["rain", "rainfall"],
+            do: ["DO", "do", "dissolvedOxygen", "dissolved_oxygen"],
+            orp: ["orp", "ORP"],
+            residualChlorine: ["residualChlorine", "residual_chlorine", "chlorine", "freeChlorine"],
+            nitrate: ["nitrate", "NO3", "no3", "nitrateLevel"]
+        };
+        const out = {};
+        defs.forEach(([key]) => {
+            let val = NaN;
+            for (const k of aliases[key]) {
+                if (live[k] !== undefined && Number.isFinite(Number(live[k]))) { val = Number(live[k]); break; }
+            }
+            if (!Number.isFinite(val)) {
+                for (const k of aliases[key]) {
+                    if (s[k] !== undefined && Number.isFinite(Number(s[k]))) { val = Number(s[k]); break; }
+                }
+            }
+            out[key] = val;
+        });
+        return out;
+    }
+
+    function stationReadingHtml(values, sourceLabel) {
+        return defs.map(([key, label, unit]) => {
+            const v = Number(values[key]);
+            const shown = Number.isFinite(v) ? v.toFixed(key === "ph" ? 2 : key === "residualChlorine" ? 2 : key === "temperature" || key === "rainfall" || key === "nitrate" ? 1 : 0) + unit : "--";
+            return `<div class="jd-station-reading"><span>${esc(label)}</span><strong>${esc(shown)}</strong></div>`;
+        }).join("");
+    }
+
+    window.jalOpenMonitoringStation = async function (location) {
+        const values = currentValues();
+        const name = location && location.name ? location.name : "JAL-DRISHTI AI Monitoring Station";
+        const popup = `
+            <div class="jd-station-popup">
+                <div class="jd-station-popup-head">
+                    <strong>${esc(name)}</strong>
+                    <small>JAL-DRISHTI AI • 10-SENSOR LIVE VIEW</small>
+                </div>
+                <div class="jd-station-reading-grid">${stationReadingHtml(values, "Connected live sensor stream")}</div>
+                <div class="jd-station-source">Live source: connected JAL-DRISHTI AI sensor network. Station-specific Firebase data will be used automatically when a station ID/location is attached to the reading.</div>
+            </div>`;
+        return popup;
+    };
+})();
+
+
+/* =========================================================
+   JAL-DRISHTI AI | MAP STATION POPUP BRIDGE
+   ========================================================= */
+(function () {
+    "use strict";
+    window.jalShowStationPopup = async function (location) {
+        try {
+            const html = await window.jalOpenMonitoringStation(location);
+            if (window.p3Map && window.L) {
+                L.popup({ maxWidth: 430 })
+                    .setLatLng([Number(location.lat), Number(location.lng)])
+                    .setContent(html)
+                    .openOn(window.p3Map);
+            } else {
+                const el = document.querySelector(".jd-monitoring-popup");
+                if (el) el.insertAdjacentHTML("beforeend", html);
+            }
+        } catch (e) {
+            console.warn("Station live view unavailable", e);
+        }
+    };
+})();
+
+
+(function () {
+    "use strict";
+    const expose = () => {
+        try {
+            if (typeof p3Map !== "undefined") window.p3Map = p3Map;
+        } catch (e) {}
+    };
+    setInterval(expose, 1000);
+    expose();
+})();
+
+/* =========================================================
+   JAL-DRISHTI AI | PROFESSIONAL SVG ICON REPLACEMENT
+   Only visual iconography is changed. Existing layout,
+   spacing, colors and functionality remain untouched.
+   ========================================================= */
+(function () {
+    "use strict";
+
+    const ICONS = {
+        "☰": '<path d="M4 7h16M4 12h16M4 17h16"/>',
+        "☀": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+        "🌙": '<path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z"/>',
+        "⛶": '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/>',
+        "💧": '<path d="M12 3s6 6.2 6 11a6 6 0 0 1-12 0c0-4.8 6-11 6-11Z"/>',
+        "📍": '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+        "🔍": '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/>',
+        "🔎": '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/>',
+        "📡": '<path d="M5 9a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0M12 15v6M9 21h6"/><circle cx="12" cy="7" r="1.5"/>',
+        "📱": '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/>',
+        "📶": '<path d="M3 8a14 14 0 0 1 18 0M6 12a9.5 9.5 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>',
+        "📊": '<path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/>',
+        "📈": '<path d="M4 17l5-5 4 3 7-8"/><path d="M16 7h4v4"/>',
+        "📉": '<path d="M4 7l5 5 4-3 7 8"/><path d="M16 17h4v-4"/>',
+        "📅": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h.01M12 14h.01M17 14h.01M7 17h.01M12 17h.01"/>',
+        "📏": '<path d="m4 19 15-15 2 2L6 21H4v-2Z"/><path d="m9 14 2 2M12 11l2 2M15 8l2 2"/>',
+        "📝": '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 12h8M8 16h6"/>',
+        "📷": '<path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.5"/>',
+        "📸": '<path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.5"/><path d="M17 10h.01"/>',
+        "🗺": '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/>',
+        "🚶": '<circle cx="12" cy="5" r="2"/><path d="m10 9 3 2 2 4M10 9l-2 5-3 4M11 12l-1 5 3 4M13 11l4 3"/>',
+        "🛰": '<path d="M8 16 4 20M16 8l4-4M7 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7L7 6a5 5 0 0 0 0 7Z"/><path d="m9 9 6 6"/>',
+        "🏛": '<path d="M3 9h18M5 9v10M9 9v10M15 9v10M19 9v10M3 19h18M4 6l8-4 8 4v3H4z"/>',
+        "🏠": '<path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-6h6v6"/>',
+        "👤": '<circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/>',
+        "💡": '<path d="M9 18h6M10 21h4M8 13a6 6 0 1 1 8 0c-1.2 1-2 2.2-2 4h-4c0-1.8-.8-3-2-4Z"/>',
+        "💬": '<path d="M20 11a7 7 0 0 1-7 7H8l-5 3 1.5-4.5A7 7 0 1 1 20 11Z"/>',
+        "🤖": '<rect x="5" y="7" width="14" height="12" rx="3"/><path d="M12 3v4M8 12h.01M16 12h.01M8 16h8"/><path d="M3 11h2M19 11h2"/>',
+        "🧠": '<path d="M9 5a3 3 0 0 0-5 2 3 3 0 0 0 1 5 3 3 0 0 0 2 5 3 3 0 0 0 4 2 3 3 0 0 0 4-2 3 3 0 0 0 2-5 3 3 0 0 0 1-5 3 3 0 0 0-5-2 3 3 0 0 0-4 0Z"/><path d="M9 8v8M15 8v8M9 12h6"/>',
+        "🧪": '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7 15h10"/>',
+        "⚗": '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7 15h10"/>',
+        "🧬": '<path d="M7 3c0 6 10 6 10 12 0 3-2 6-5 6M17 3c0 6-10 6-10 12 0 3 2 6 5 6"/><path d="M8 7h8M8 17h8M9 11h6"/>',
+        "🧭": '<circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4 4-2Z"/>',
+        "🦟": '<path d="M12 8v10M8 10l-3-2M16 10l3-2M8 15l-4 2M16 15l4 2"/><ellipse cx="12" cy="6" rx="2.5" ry="3"/><path d="M9 5 6 3M15 5l3-2"/>',
+        "🧴": '<path d="M9 5h6v3H9zM10 3h4v2h-4zM8 8h8v13H8z"/><path d="M11 3h2"/>',
+        "🫧": '<circle cx="9" cy="14" r="5"/><circle cx="16" cy="9" r="3"/><circle cx="18" cy="17" r="2"/>',
+        "⚡": '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+        "🌡": '<path d="M14 14.5V5a2 2 0 0 0-4 0v9.5a4 4 0 1 0 4 0Z"/><path d="M12 12V6"/>',
+        "🌧": '<path d="M7 16a5 5 0 1 1 2-9.6A6 6 0 0 1 20 9a4 4 0 0 1-1 7H7Z"/><path d="M8 19l-1 2M13 19l-1 2M18 19l-1 2"/>',
+        "🌫": '<path d="M4 9h16M3 13h18M5 17h14"/>',
+        "🎛": '<path d="M5 4v16M12 4v16M19 4v16"/><path d="M3 8h4M10 14h4M17 9h4"/>',
+        "🔮": '<circle cx="12" cy="12" r="8"/><path d="m12 5 2 7-2 4-2-4 2-7Z"/>',
+        "🚨": '<path d="M5 19h14M7 19l2-9h6l2 9M9 10a3 3 0 0 1 6 0M12 3v2M5 5l2 2M19 5l-2 2"/>',
+        "⚠": '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5M12 17h.01"/>',
+        "✓": '<path d="m5 12 4 4L19 6"/>',
+        "❌": '<path d="m7 7 10 10M17 7 7 17"/>',
+        "📋": '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/>',
+        "🛠": '<path d="m14 6 4 4M6 18l7-7M5 5l4 4M16 16l3 3"/><path d="M15 4a4 4 0 0 0-5 5l5 5a4 4 0 0 0 5-5"/>',
+        "🔴": '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',
+        "🟢": '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',
+        "🟡": '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',
+        "🔵": '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>'
+    };
+
+    const ATTR_RE = /[☀☰⚗⚡⛶🌡🌧🌫🎛🏛🏠👤💡💧💬📅📈📉📊📍📏📝📡📱📶📷🔍🔎🔮🔴🔵🗺🚨🚶🛰🟡🟢🤖🦟🧠🧪🧬🧭🧴🫧⚠✓❌🌙📋📸🛠]/g;
+
+    function iconSpan(ch) {
+        const svg = ICONS[ch];
+        if (!svg) return document.createTextNode(ch);
+        const span = document.createElement("span");
+        span.className = "jal-pro-icon";
+        span.setAttribute("aria-hidden", "true");
+        span.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg>';
+        return span;
+    }
+
+    function replaceTextNode(node) {
+        const value = node.nodeValue;
+        if (!value || !ATTR_RE.test(value)) {
+            ATTR_RE.lastIndex = 0;
+            return;
+        }
+        ATTR_RE.lastIndex = 0;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        let match;
+        while ((match = ATTR_RE.exec(value))) {
+            if (match.index > last) frag.appendChild(document.createTextNode(value.slice(last, match.index)));
+            frag.appendChild(iconSpan(match[0]));
+            last = match.index + match[0].length;
+        }
+        if (last < value.length) frag.appendChild(document.createTextNode(value.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+    }
+
+    function replaceAllProfessionalIcons(root = document.body) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                const parent = node.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                const tag = parent.tagName;
+                if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT" || parent.closest(".jal-pro-icon")) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return ATTR_RE.test(node.nodeValue || "") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        });
+        const nodes = [];
+        let node;
+        while ((node = walker.nextNode())) nodes.push(node);
+        nodes.forEach(replaceTextNode);
+    }
+
+    function initProfessionalIcons() {
+        replaceAllProfessionalIcons(document.body);
+        if (!window.MutationObserver || !document.body) return;
+        let busy = false;
+        const observer = new MutationObserver(records => {
+            if (busy) return;
+            const targets = [];
+            records.forEach(record => {
+                record.addedNodes.forEach(n => {
+                    if (n.nodeType === Node.TEXT_NODE || n.nodeType === Node.ELEMENT_NODE) targets.push(n);
+                });
+            });
+            if (!targets.length) return;
+            busy = true;
+            requestAnimationFrame(() => {
+                try {
+                    targets.forEach(n => {
+                        if (n.nodeType === Node.TEXT_NODE) replaceTextNode(n);
+                        else if (n.isConnected) replaceAllProfessionalIcons(n);
+                    });
+                } finally {
+                    busy = false;
+                }
+            });
+        });
+        observer.observe(document.body, {childList:true, subtree:true});
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initProfessionalIcons, {once:true});
+    } else {
+        initProfessionalIcons();
+    }
+})();
