@@ -4647,3 +4647,179 @@ footer strong {
     left: 50%;
     transform: translate(-50%, -50%);
 }
+
+
+/* =========================================================
+   10-SENSOR EXTENSION: ORP / RESIDUAL CHLORINE / NITRATE
+   ========================================================= */
+#card-orp,
+#card-residualChlorine,
+#card-nitrate {
+    position: relative;
+}
+
+#card-orp .sensor-top span:first-child,
+#card-residualChlorine .sensor-top span:first-child,
+#card-nitrate .sensor-top span:first-child {
+    font-weight: 900;
+}
+
+#card-orp .sensor-status,
+#card-residualChlorine .sensor-status,
+#card-nitrate .sensor-status {
+    min-width: 74px;
+}
+
+@media (max-width: 1200px) {
+    .sensor-grid { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+@media (max-width: 800px) {
+    .sensor-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 520px) {
+    .sensor-grid { grid-template-columns: 1fr !important; }
+}
+
+
+/* =========================================================
+   JAL-DRISHTI AI | LOCATION-AWARE MONITORING
+   Functional addition only — existing design untouched.
+   ========================================================= */
+
+.jd-location-bar{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    margin:0 0 20px;
+    padding:14px 16px;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:linear-gradient(145deg,var(--panel),var(--panel-2));
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(5px);
+}
+.jd-location-main{display:flex;align-items:center;gap:11px;min-width:240px}
+.jd-location-icon{
+    width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    background:rgba(8,191,255,.09);font-size:19px;
+}
+.jd-location-copy small{display:block;color:var(--blue);font-size:8px;font-weight:800;letter-spacing:1.3px}
+.jd-location-copy strong{display:block;margin-top:3px;font-size:13px;color:var(--text)}
+.jd-location-copy span{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.jd-location-actions{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end}
+.jd-location-actions button{
+    border:1px solid rgba(8,191,255,.18);background:rgba(8,191,255,.07);
+    color:var(--text);padding:9px 11px;border-radius:10px;font-size:10px;font-weight:700;
+}
+.jd-location-actions button:hover{background:rgba(8,191,255,.14)}
+.jd-location-actions input{
+    width:min(310px,35vw);border:1px solid var(--border);background:var(--panel-2);
+    color:var(--text);padding:9px 11px;border-radius:10px;outline:none;font:inherit;font-size:10px;
+}
+.jd-location-actions input::placeholder{color:var(--muted)}
+.jd-location-results{
+    position:absolute;right:16px;top:calc(100% + 5px);z-index:80;width:min(500px,55vw);
+    display:none;max-height:260px;overflow:auto;border:1px solid var(--border);
+    border-radius:12px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(10px);
+}
+.jd-location-result{
+    display:block;width:100%;padding:10px 12px;text-align:left;border:0;border-bottom:1px solid var(--border);
+    background:transparent;color:var(--text);font-size:10px;cursor:pointer;
+}
+.jd-location-result:hover{background:rgba(8,191,255,.08)}
+.jd-location-result:last-child{border-bottom:0}
+@media(max-width:900px){
+    .jd-location-bar{align-items:stretch;flex-direction:column}
+    .jd-location-actions{justify-content:stretch;flex-wrap:wrap}
+    .jd-location-actions input{width:100%}
+    .jd-location-results{left:0;right:0;width:100%}
+}
+
+/* =========================================================
+   AI / ALERT LIVE TEXT — no visual redesign
+   ========================================================= */
+.jd-ai-reading-list{margin-top:8px;line-height:1.55}
+.jd-ai-reading-list b{color:var(--text)}
+.jd-alert-language{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);color:var(--muted);line-height:1.45}
+.jd-alert-language strong{color:var(--text)}
+
+/* =========================================================
+   JAL-DRISHTI AI | PROFESSIONAL ICON SYSTEM
+   Replaces decorative emoji icons with a consistent
+   lightweight SVG visual language. Layout/design unchanged.
+   ========================================================= */
+.jal-pro-icon{
+    display:inline-flex;
+    width:1.05em;
+    height:1.05em;
+    min-width:1.05em;
+    min-height:1.05em;
+    align-items:center;
+    justify-content:center;
+    vertical-align:-0.14em;
+    color:currentColor;
+    line-height:1;
+    flex:0 0 auto;
+}
+.jal-pro-icon svg{
+    width:100%;
+    height:100%;
+    display:block;
+    overflow:visible;
+}
+.jal-pro-icon svg *{
+    vector-effect:non-scaling-stroke;
+}
+/* Slightly larger icons where an emoji was previously the main visual. */
+.sensor-icon .jal-pro-icon,
+.mini-icon .jal-pro-icon,
+.ai-icon .jal-pro-icon,
+.jal-ai-report-button .jal-pro-icon{
+    width:1.18em;
+    height:1.18em;
+}
+/* Location controls keep their original compact footprint. */
+.jd-location-bar .jal-pro-icon,
+.jd-location-result .jal-pro-icon{
+    width:1em;
+    height:1em;
+}
+
+/* =========================================================
+   JAL-DRISHTI AI | MONITORING STATION LIVE POPUP
+   ========================================================= */
+.jd-monitoring-popup{
+    min-width:210px;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+.jd-monitoring-popup strong{font-size:13px;color:#102a3d}
+.jd-monitoring-popup span{font-size:9px;color:#60798a}
+.jd-monitoring-popup button{
+    border:0;
+    border-radius:8px;
+    padding:8px 10px;
+    background:#0874ca;
+    color:#fff;
+    font-size:10px;
+    font-weight:800;
+    cursor:pointer;
+}
+.jd-station-popup{min-width:300px;color:#102a3d}
+.jd-station-popup-head{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+.jd-station-popup-head strong{font-size:14px}
+.jd-station-popup-head small{font-size:8px;letter-spacing:1px;color:#0874ca;font-weight:800}
+.jd-station-reading-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.jd-station-reading{
+    display:flex;justify-content:space-between;gap:8px;align-items:center;
+    padding:7px 8px;border:1px solid rgba(5,55,80,.12);border-radius:8px;background:#f5fbff;
+}
+.jd-station-reading span{font-size:9px;color:#60798a}
+.jd-station-reading strong{font-size:10px;color:#102a3d}
+.jd-station-source{margin-top:9px;padding-top:8px;border-top:1px solid rgba(5,55,80,.12);font-size:8px;line-height:1.45;color:#60798a}
+@media(max-width:520px){.jd-station-popup{min-width:240px}.jd-station-reading-grid{grid-template-columns:1fr}}
