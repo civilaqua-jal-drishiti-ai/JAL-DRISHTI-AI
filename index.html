@@ -1244,6 +1244,24 @@
 
                 </header>
 
+                <!-- LOCATION-AWARE MONITORING -->
+                <div class="jd-location-bar" id="jdLocationBar">
+                    <div class="jd-location-main">
+                        <div class="jd-location-icon">📍</div>
+                        <div class="jd-location-copy">
+                            <small>MONITORING LOCATION</small>
+                            <strong id="jdSelectedLocation">Location not selected</strong>
+                            <span id="jdLocalLanguage">Local language: --</span>
+                        </div>
+                    </div>
+                    <div class="jd-location-actions">
+                        <button type="button" id="jdCurrentLocationBtn">📡 Current Location</button>
+                        <input id="jdManualLocationInput" type="text" autocomplete="off" placeholder="Search any city / village / area">
+                        <button type="button" id="jdManualLocationBtn">🔎 Search</button>
+                    </div>
+                    <div class="jd-location-results" id="jdLocationResults"></div>
+                </div>
+
 
                 <!-- RISK OVERVIEW -->
 
@@ -1894,6 +1912,99 @@
                     </div>
 
 
+                    <div
+                        class="sensor-card"
+                        id="card-orp"
+                    >
+
+                        <div class="sensor-top">
+                            <span>ORP</span>
+                            <span class="sensor-icon">⚡</span>
+                        </div>
+
+                        <p>
+                            OXIDATION / REDUCTION POTENTIAL
+                        </p>
+
+                        <h3>
+                            <span id="orpValue">320</span>
+                            <small>mV</small>
+                        </h3>
+
+                        <span
+                            id="orpStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="orpTrend">→</span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-residualChlorine"
+                    >
+
+                        <div class="sensor-top">
+                            <span>Residual Chlorine</span>
+                            <span class="sensor-icon">🧴</span>
+                        </div>
+
+                        <p>
+                            DISINFECTION LEVEL
+                        </p>
+
+                        <h3>
+                            <span id="residualChlorineValue">0.35</span>
+                            <small>mg/L</small>
+                        </h3>
+
+                        <span
+                            id="residualChlorineStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="residualChlorineTrend">→</span>
+
+                    </div>
+
+
+                    <div
+                        class="sensor-card"
+                        id="card-nitrate"
+                    >
+
+                        <div class="sensor-top">
+                            <span>Nitrate</span>
+                            <span class="sensor-icon">🧬</span>
+                        </div>
+
+                        <p>
+                            NO₃ / NITRATE LEVEL
+                        </p>
+
+                        <h3>
+                            <span id="nitrateValue">20</span>
+                            <small>mg/L</small>
+                        </h3>
+
+                        <span
+                            id="nitrateStatus"
+                            class="sensor-status normal"
+                        >
+                            NORMAL
+                        </span>
+
+                        <span id="nitrateTrend">→</span>
+
+                    </div>
+
+
                 </div>
 
 
@@ -2177,6 +2288,33 @@
                         </div>
 
 
+                        <div class="fingerprint-row">
+                            <span>ORP</span>
+                            <div class="fingerprint-bar">
+                                <div id="orpFingerprint" style="width:90%"></div>
+                            </div>
+                            <strong id="orpFingerprintValue">--</strong>
+                        </div>
+
+
+                        <div class="fingerprint-row">
+                            <span>Residual Chlorine</span>
+                            <div class="fingerprint-bar">
+                                <div id="residualChlorineFingerprint" style="width:90%"></div>
+                            </div>
+                            <strong id="residualChlorineFingerprintValue">--</strong>
+                        </div>
+
+
+                        <div class="fingerprint-row">
+                            <span>Nitrate</span>
+                            <div class="fingerprint-bar">
+                                <div id="nitrateFingerprint" style="width:90%"></div>
+                            </div>
+                            <strong id="nitrateFingerprintValue">--</strong>
+                        </div>
+
+
                     </div>
 
 
@@ -2276,7 +2414,7 @@
                         <div>
 
                             <strong id="normalCount">
-                                7
+                                10
                             </strong>
 
                             <small>
@@ -3077,6 +3215,27 @@
                                 100%
                             </strong>
 
+                        </div>
+
+
+                        <div class="performance-item">
+                            <span>ORP</span>
+                            <div class="performance-bar"><div id="orpHealthBar" style="width:100%"></div></div>
+                            <strong id="orpHealthValue">100%</strong>
+                        </div>
+
+
+                        <div class="performance-item">
+                            <span>Residual Chlorine</span>
+                            <div class="performance-bar"><div id="residualChlorineHealthBar" style="width:100%"></div></div>
+                            <strong id="residualChlorineHealthValue">100%</strong>
+                        </div>
+
+
+                        <div class="performance-item">
+                            <span>Nitrate</span>
+                            <div class="performance-bar"><div id="nitrateHealthBar" style="width:100%"></div></div>
+                            <strong id="nitrateHealthValue">100%</strong>
                         </div>
 
 
